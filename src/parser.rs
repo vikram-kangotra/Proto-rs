@@ -62,6 +62,16 @@ impl<'a> Parser<'a> {
                 let token = self.lexer.next().unwrap();
                 Box::new(LiteralExpr::new(token.literal.unwrap().parse::<f64>().unwrap()))
             },
+            TokenKind::LParen => {
+                self.lexer.next();
+                let expr = self.expression();
+                if let TokenKind::RParen = self.lexer.peek().unwrap_or(&Token::default()).kind {
+                    self.lexer.next();
+                } else {
+                    panic!("Syntax Error: Expected closing parenthesis");
+                }
+                expr
+            },
             _ => panic!("Unexpected token"),
         }
     }
