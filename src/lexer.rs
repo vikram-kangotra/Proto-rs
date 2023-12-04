@@ -60,7 +60,7 @@ impl<'a> Lexer<'a> {
 
         let literal = self.input[self.start..self.current].to_string();
 
-        Some(Token::new(TokenKind::Int, literal))
+        Some(Token::new_with_literal(TokenKind::Int, literal))
     }
 }
 
@@ -78,39 +78,39 @@ impl Iterator for Lexer<'_> {
         self.start = self.current;
 
         match self.advance() {
-            '-' => Some(Token::new(TokenKind::Minus, "-".to_string())),
-            '+' => Some(Token::new(TokenKind::Plus, "+".to_string())),
-            '*' => Some(Token::new(TokenKind::Asterisk, "*".to_string())),
-            '/' => Some(Token::new(TokenKind::Slash, "/".to_string())),
-            '(' => Some(Token::new(TokenKind::LParen, "(".to_string())),
-            ')' => Some(Token::new(TokenKind::RParen, ")".to_string())),
-            '{' => Some(Token::new(TokenKind::LBrace, "{".to_string())),
-            '}' => Some(Token::new(TokenKind::RBrace, "}".to_string())),
-            ',' => Some(Token::new(TokenKind::Comma, ",".to_string())),
-            ';' => Some(Token::new(TokenKind::Semicolon, ";".to_string())),
-            '<' => Some(Token::new(TokenKind::Lt, "<".to_string())),
-            '>' => Some(Token::new(TokenKind::Gt, ">".to_string())),
+            '-' => Some(Token::new(TokenKind::Minus)),
+            '+' => Some(Token::new(TokenKind::Plus)),
+            '*' => Some(Token::new(TokenKind::Asterisk)),
+            '/' => Some(Token::new(TokenKind::Slash)),
+            '(' => Some(Token::new(TokenKind::LParen)),
+            ')' => Some(Token::new(TokenKind::RParen)),
+            '{' => Some(Token::new(TokenKind::LBrace)),
+            '}' => Some(Token::new(TokenKind::RBrace)),
+            ',' => Some(Token::new(TokenKind::Comma)),
+            ';' => Some(Token::new(TokenKind::Semicolon)),
+            '<' => Some(Token::new(TokenKind::Lt)),
+            '>' => Some(Token::new(TokenKind::Gt)),
             '=' => {
                 if self.peek_char() == '=' {
                     self.advance();
-                    Some(Token::new(TokenKind::Eq, "==".to_string()))
+                    Some(Token::new(TokenKind::Eq))
                 } else {
-                    Some(Token::new(TokenKind::Assign, "=".to_string()))
+                    Some(Token::new(TokenKind::Assign))
                 }
             },
             '!' => {
                 if self.peek_char() == '=' {
                     self.advance();
-                    Some(Token::new(TokenKind::NotEq, "!=".to_string()))
+                    Some(Token::new(TokenKind::NotEq))
                 } else {
-                    Some(Token::new(TokenKind::Bang, "!".to_string()))
+                    Some(Token::new(TokenKind::Bang))
                 }
             },
             '0'..='9' => self.number(),
-            '\0' => Some(Token::new(TokenKind::EOF, "".to_string())),
+            '\0' => Some(Token::new(TokenKind::EOF)),
             _ => {
                 self.advance();
-                Some(Token::new(TokenKind::Illegal, "".to_string()))
+                Some(Token::new(TokenKind::Illegal))
             },
         }
     }

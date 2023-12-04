@@ -1,14 +1,21 @@
 #[derive(Debug, Default, PartialEq)]
 pub struct Token {
     pub kind: TokenKind,
-    pub literal: String,
+    pub literal: Option<String>,
 }
 
 impl Token {
-    pub fn new(kind: TokenKind, literal: String) -> Token {
+    pub fn new(kind: TokenKind) -> Token {
         Token {
             kind,
-            literal,
+            literal: None,
+        }
+    }
+
+    pub fn new_with_literal(kind: TokenKind, literal: String) -> Token {
+        Token {
+            kind,
+            literal: Some(literal),
         }
     }
 }

@@ -60,7 +60,7 @@ impl<'a> Parser<'a> {
         match self.lexer.peek().unwrap_or(&Token::default()).kind {
             TokenKind::Int => {
                 let token = self.lexer.next().unwrap();
-                Box::new(LiteralExpr::new(token.literal.parse::<f64>().unwrap()))
+                Box::new(LiteralExpr::new(token.literal.unwrap().parse::<f64>().unwrap()))
             },
             _ => panic!("Unexpected token"),
         }
