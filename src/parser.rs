@@ -50,7 +50,7 @@ impl<'a> Parser<'a> {
         if let TokenKind::Minus | TokenKind::Plus = self.lexer.peek().unwrap_or(&Token::default()).kind {
             let op = self.lexer.next().unwrap();
             let right = self.unary();
-            Box::new(BinaryExpr::new(Box::new(LiteralExpr::new(0.)), op, right))
+            Box::new(UnaryExpr::new(op, right))
         } else {
             self.primary()
         }
@@ -71,6 +71,7 @@ impl<'a> Parser<'a> {
 pub trait Visitor {
     fn visit_binary_expr(&mut self, expr: &BinaryExpr) -> f64;
     fn visit_literal_expr(&mut self, expr: &LiteralExpr) -> f64;
+    fn visit_unary_expr(&mut self, expr: &UnaryExpr) -> f64;
 }
 
 pub trait Expr {
@@ -87,4 +88,10 @@ pub struct BinaryExpr {
 #[generate_ast]
 pub struct LiteralExpr {
     pub value: f64,
+}
+
+#[generate_ast]
+pub struct UnaryExpr {
+    pub op: Token,
+    pub right: Box<dyn Expr>,
 }

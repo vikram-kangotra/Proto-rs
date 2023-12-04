@@ -1,6 +1,5 @@
-use crate::parser::Visitor;
 use crate::token::TokenKind;
-use crate::parser::{Expr, BinaryExpr, LiteralExpr};
+use crate::parser::{Expr, BinaryExpr, LiteralExpr, Visitor, UnaryExpr};
 
 pub struct Interpreter;
 
@@ -30,5 +29,15 @@ impl Visitor for Interpreter {
 
     fn visit_literal_expr(&mut self, expr: &LiteralExpr) -> f64 {
         expr.value
+    }
+
+    fn visit_unary_expr(&mut self, expr: &UnaryExpr) -> f64 {
+        let right = expr.right.accept(self);
+
+        match expr.op.kind {
+            TokenKind::Minus => -right,
+            TokenKind::Plus => right,
+            _ => panic!("Unexpected token"),
+        }
     }
 }
