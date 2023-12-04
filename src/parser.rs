@@ -88,19 +88,19 @@ pub trait Expr {
     fn accept(&self, visitor: &mut dyn Visitor) -> f64;
 }
 
-#[generate_ast]
+#[generate_ast(Expr, Visitor)]
 pub struct BinaryExpr {
     pub left: Box<dyn Expr>,
     pub op: Token,
     pub right: Box<dyn Expr>,
 }
 
-#[generate_ast]
+#[generate_ast(Expr, Visitor)]
 pub struct LiteralExpr {
     pub value: f64,
 }
 
-#[generate_ast]
+#[generate_ast(Expr, Visitor)]
 pub struct UnaryExpr {
     pub op: Token,
     pub right: Box<dyn Expr>,

@@ -3,7 +3,23 @@ use quote::quote;
 use syn::{parse_macro_input, ItemStruct, Fields};
 
 #[proc_macro_attribute]
-pub fn generate_ast(_attr: TokenStream, item: TokenStream) -> TokenStream {
+pub fn generate_ast(attr: TokenStream, item: TokenStream) -> TokenStream {
+
+    let args = parse_macro_input!(attr as syn::AttributeArgs);
+
+    if args.len() != 2 {
+        panic!("You must provide exactly two identifiers.");
+    }
+
+    let impl_trait = match &args[0] {
+        syn::NestedMeta::Meta(syn::Meta::Path(path)) => path.get_ident().unwrap(),
+        _ => panic!("You must provide two identifiers."),
+    };
+
+    let visitor_ident = match &args[1] {
+        syn::NestedMeta::Meta(syn::Meta::Path(path)) => path.get_ident().unwrap(),
+        _ => panic!("You must provide two identifiers."),
+    };
 
     let item = parse_macro_input!(item as ItemStruct);
 
@@ -61,8 +77,8 @@ pub fn generate_ast(_attr: TokenStream, item: TokenStream) -> TokenStream {
                 }
             }
 
-            impl Expr for #item_name {
-                fn accept(&self, visitor: &mut dyn Visitor) -> f64 {
+            impl #impl_trait for #item_name {
+                fn accept(&self, visitor: &mut dyn #visitor_ident) -> f64 {
                     visitor.#visit(self)
                 }
             }
