@@ -1,66 +1,66 @@
-use crate::lexer::Lexer;
-use crate::token::Token;
-use crate::token::TokenKind;
+use crate::frontend::expr::{BinaryExpr, Expr, LiteralExpr, UnaryExpr};
+use crate::frontend::lexer::Lexer;
+use crate::frontend::token::Token;
+use crate::frontend::token::TokenKind;
 
 use std::iter::Peekable;
-use proto_rs_macros::generate_ast;
 
-pub struct Parser<'a> {
-    lexer: Peekable<Lexer<'a>>,
+pub struct Parser {
+    lexer: Peekable<Lexer>,
 }
 
-impl<'a> Parser<'a> {
+impl<'ctx> Parser {
 
-    pub fn new(lexer: Lexer<'a>) -> Parser<'a> {
-        Parser {
+    pub fn new(lexer: Lexer) -> Self {
+        Self {
             lexer: lexer.peekable(),
         }
     }
 
-    pub fn parse(&mut self) -> Box<dyn Expr> {
+    pub fn parse(&mut self) -> Box<dyn Expr<'ctx> + 'ctx> {
         self.expression()
     }
 
-    fn expression(&mut self) -> Box<dyn Expr> {
+    fn expression(&mut self) -> Box<dyn Expr<'ctx> + 'ctx> {
         self.term()
     }
 
-    fn term(&mut self) -> Box<dyn Expr> {
+    fn term(&mut self) -> Box<dyn Expr<'ctx> + 'ctx> {
         let mut left = self.factor();
 
         while let TokenKind::Plus | TokenKind::Minus = self.lexer.peek().unwrap_or(&Token::default()).kind {
             let op = self.lexer.next().unwrap();
             let right = self.factor();
-            left = Box::new(BinaryExpr::new(left, op, right));
+            left = Box::new(BinaryExpr::new(left, op, right) as BinaryExpr<'ctx>);
         }
         left
     }
 
-    fn factor(&mut self) -> Box<dyn Expr> {
+    fn factor(&mut self) -> Box<dyn Expr<'ctx> + 'ctx> {
         let mut left = self.unary(); 
         while let TokenKind::Asterisk | TokenKind::Slash = self.lexer.peek().unwrap_or(&Token::default()).kind {
             let op = self.lexer.next().unwrap();
             let right = self.unary();
-            left = Box::new(BinaryExpr::new(left, op, right));
+            left = Box::new(BinaryExpr::new(left, op, right) as BinaryExpr<'ctx>);
         }
         left
     }
 
-    fn unary(&mut self) -> Box<dyn Expr> {
+    fn unary(&mut self) -> Box<dyn Expr<'ctx> + 'ctx> {
         if let TokenKind::Minus | TokenKind::Plus = self.lexer.peek().unwrap_or(&Token::default()).kind {
             let op = self.lexer.next().unwrap();
             let right = self.unary();
-            Box::new(UnaryExpr::new(op, right))
+            Box::new(UnaryExpr::new(op, right) as UnaryExpr<'ctx>)
         } else {
             self.primary()
         }
     }
 
-    fn primary(&mut self) -> Box<dyn Expr> {
+    fn primary(&mut self) -> Box<dyn Expr<'ctx> + 'ctx> {
         match self.lexer.peek().unwrap_or(&Token::default()).kind {
             TokenKind::Int => {
                 let token = self.lexer.next().unwrap();
-                Box::new(LiteralExpr::new(token.literal.unwrap().parse::<f64>().unwrap()))
+                Box::new(LiteralExpr::new(token.literal.unwrap().parse::<i64>().unwrap()))
             },
             TokenKind::LParen => {
                 self.lexer.next();
@@ -76,32 +76,4 @@ impl<'a> Parser<'a> {
         }
     }
 
-}
-
-pub trait Visitor {
-    fn visit_binary_expr(&mut self, expr: &BinaryExpr) -> f64;
-    fn visit_literal_expr(&mut self, expr: &LiteralExpr) -> f64;
-    fn visit_unary_expr(&mut self, expr: &UnaryExpr) -> f64;
-}
-
-pub trait Expr {
-    fn accept(&self, visitor: &mut dyn Visitor) -> f64;
-}
-
-#[generate_ast(Expr, Visitor)]
-pub struct BinaryExpr {
-    pub left: Box<dyn Expr>,
-    pub op: Token,
-    pub right: Box<dyn Expr>,
-}
-
-#[generate_ast(Expr, Visitor)]
-pub struct LiteralExpr {
-    pub value: f64,
-}
-
-#[generate_ast(Expr, Visitor)]
-pub struct UnaryExpr {
-    pub op: Token,
-    pub right: Box<dyn Expr>,
 }

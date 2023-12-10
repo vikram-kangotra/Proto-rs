@@ -1,17 +1,17 @@
-use crate::token::Token;
-use crate::token::TokenKind;
+use crate::frontend::token::Token;
+use crate::frontend::token::TokenKind;
 
-pub struct Lexer<'a> {
-    input: &'a str,
+pub struct Lexer {
+    input: String,
     start: usize,
     current: usize,
     line: usize,
 }
 
-impl<'a> Lexer<'a> { 
-    pub fn new(input: &'a str) -> Lexer {
+impl Lexer { 
+    pub fn new(input: &str) -> Lexer {
         Lexer {
-            input,
+            input: input.to_owned(),
             start: 0,
             current: 0,
             line: 1,
@@ -64,7 +64,7 @@ impl<'a> Lexer<'a> {
     }
 }
 
-impl Iterator for Lexer<'_> {
+impl Iterator for Lexer {
     type Item = Token;
 
     fn next(&mut self) -> Option<Self::Item> {
