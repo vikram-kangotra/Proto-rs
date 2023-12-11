@@ -32,7 +32,7 @@ pub fn expr_derive(item: TokenStream) -> TokenStream {
     let output = quote! {
 
         impl<'ctx> Expr<'ctx> for #item_name<#lifetime> {
-            fn accept(&self, visitor: &mut dyn Visitor<'ctx>) -> IntValue<'ctx> {
+            fn accept(&self, visitor: &mut dyn Visitor<'ctx>) -> BasicValueEnum<'ctx> {
                 visitor.#visit(self)
             }
         }

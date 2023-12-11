@@ -1,11 +1,12 @@
-use inkwell::values::IntValue;
+use inkwell::context::Context;
+use inkwell::values::BasicValueEnum;
 use crate::frontend::visitor::Visitor;
 use crate::frontend::token::Token;
 
 use proto_rs_macros::Expr;
 
 pub trait Expr<'ctx> {
-    fn accept(&self, visitor: &mut dyn Visitor<'ctx>) -> IntValue<'ctx>;
+    fn accept(&self, visitor: &mut dyn Visitor<'ctx>) -> BasicValueEnum<'ctx>;
 }
 
 #[derive(Expr)]
@@ -26,15 +27,15 @@ impl<'ctx> BinaryExpr<'ctx> {
 }
 
 #[derive(Expr)]
-pub struct LiteralExpr {
-    pub value: i64,
+pub struct LiteralExpr<'ctx> {
+    pub value: BasicValueEnum<'ctx>,
 }
 
-impl LiteralExpr {
-    pub fn new(value: i64) -> Self {
+impl<'ctx> LiteralExpr<'ctx> {
+    pub fn new_i64(context: &'ctx Context, value: i64) -> Self {
         Self {
-            value,
-        }
+            value: context.i64_type().const_int(value as u64, false).into(),
+        } 
     }
 }
 

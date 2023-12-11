@@ -25,7 +25,7 @@ impl<'ctx> Compiler<'ctx> {
     pub fn compile(&mut self, source: &str) -> Result<(), String> {
 
         let lexer = Lexer::new(source);
-        let mut parser = Parser::new(lexer);
+        let mut parser = Parser::new(&self.context, lexer);
 
         let expr = parser.parse();
 
@@ -35,7 +35,7 @@ impl<'ctx> Compiler<'ctx> {
         let basic_block = self.context.append_basic_block(function, "entry");
         self.builder.position_at_end(basic_block);
         
-        let mut generator = CodeGenerator::new(&self.context, &self.builder);
+        let mut generator = CodeGenerator::new(&self.builder);
         let value = generator.generate_code(expr.as_ref());
         let _ = self.builder.build_return(Some(&value));
 

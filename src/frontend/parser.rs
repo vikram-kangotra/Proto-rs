@@ -1,3 +1,5 @@
+use inkwell::context::Context;
+
 use crate::frontend::expr::{BinaryExpr, Expr, LiteralExpr, UnaryExpr};
 use crate::frontend::lexer::Lexer;
 use crate::frontend::token::Token;
@@ -5,14 +7,16 @@ use crate::frontend::token::TokenKind;
 
 use std::iter::Peekable;
 
-pub struct Parser {
+pub struct Parser<'ctx> {
+    context: &'ctx Context,
     lexer: Peekable<Lexer>,
 }
 
-impl<'ctx> Parser {
+impl<'ctx> Parser<'ctx> {
 
-    pub fn new(lexer: Lexer) -> Self {
+    pub fn new(context: &'ctx Context , lexer: Lexer) -> Self {
         Self {
+            context,
             lexer: lexer.peekable(),
         }
     }
@@ -60,7 +64,8 @@ impl<'ctx> Parser {
         match self.lexer.peek().unwrap_or(&Token::default()).kind {
             TokenKind::Int => {
                 let token = self.lexer.next().unwrap();
-                Box::new(LiteralExpr::new(token.literal.unwrap().parse::<i64>().unwrap()))
+                let value = token.literal.unwrap().parse::<i64>().unwrap();
+                Box::new(LiteralExpr::new_i64(self.context, value) as LiteralExpr<'ctx>)
             },
             TokenKind::LParen => {
                 self.lexer.next();
