@@ -1,5 +1,10 @@
-EXPR: TERM;
-TERM: FACTOR (('+' | '-') FACTOR)*;
-FACTOR: UNARY (('*' | '/') UNARY)*;
-UNARY: ('+'|'-') UNARY | PRIMARY;
-PRIMARY: INT | '(' EXPR ')';
+DIGIT: [0-9];
+INT: DIGIT+;
+FLOAT: DIGIT+ '.' DIGIT+ EXPONENT?;
+EXPONENT: [eE][+-]? DIGIT+;
+
+expr: term;
+term: factor (('+' | '-') factor)*;
+factor: unary (('*' | '/') unary)*;
+unary: ('+'|'-') unary | primary;
+primary: INT | '(' expr ')';

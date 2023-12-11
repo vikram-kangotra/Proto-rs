@@ -52,15 +52,30 @@ impl Lexer {
 
         if self.peek_char() == '.' && self.peek_next().is_digit(10) {
             self.advance();
-
             while self.peek_char().is_digit(10) {
                 self.advance();
             }
         }
 
-        let literal = self.input[self.start..self.current].to_string();
+        if self.peek_char() == 'e' || self.peek_char() == 'E' {
+            self.advance();
+            if self.peek_char() == '+' || self.peek_char() == '-' {
+                self.advance();
+            }
+            while self.peek_char().is_digit(10) {
+                self.advance();
+            }
+        }
 
-        Some(Token::new_with_literal(TokenKind::Int, literal))
+        let lexeme = self.input[self.start..self.current].to_string();
+
+        let kind = if lexeme.contains('.') || lexeme.contains('e') || lexeme.contains('E') {
+            TokenKind::Float
+        } else {
+            TokenKind::Int
+        };
+
+        Some(Token::new_with_literal(kind, lexeme))
     }
 }
 

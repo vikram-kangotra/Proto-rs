@@ -1,5 +1,5 @@
 use inkwell::values::IntValue;
-use inkwell::{context::Context, builder::Builder, values::BasicValueEnum};
+use inkwell::{builder::Builder, values::BasicValueEnum};
 use crate::code_generator::CodeGenerator;
 use crate::frontend::expr::{Expr, BinaryExpr, LiteralExpr, UnaryExpr};
 use crate::frontend::visitor::Visitor;

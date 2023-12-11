@@ -1,21 +1,21 @@
 #[derive(Debug, Default, PartialEq)]
 pub struct Token {
     pub kind: TokenKind,
-    pub literal: Option<String>,
+    pub lexeme: Option<String>,
 }
 
 impl Token {
     pub fn new(kind: TokenKind) -> Token {
         Token {
             kind,
-            literal: None,
+            lexeme: None,
         }
     }
 
-    pub fn new_with_literal(kind: TokenKind, literal: String) -> Token {
+    pub fn new_with_literal(kind: TokenKind, lexeme: String) -> Token {
         Token {
             kind,
-            literal: Some(literal),
+            lexeme: Some(lexeme),
         }
     }
 }
@@ -29,6 +29,7 @@ pub enum TokenKind {
     // Identifiers + literals
     Ident,
     Int,
+    Float,
 
     // Operators
     Assign,

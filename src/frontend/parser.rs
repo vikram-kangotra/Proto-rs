@@ -64,7 +64,7 @@ impl<'ctx> Parser<'ctx> {
         match self.lexer.peek().unwrap_or(&Token::default()).kind {
             TokenKind::Int => {
                 let token = self.lexer.next().unwrap();
-                let value = token.literal.unwrap().parse::<i64>().unwrap();
+                let value = token.lexeme.unwrap().parse::<i64>().unwrap();
                 Box::new(LiteralExpr::new_i64(self.context, value) as LiteralExpr<'ctx>)
             },
             TokenKind::LParen => {
