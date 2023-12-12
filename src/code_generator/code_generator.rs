@@ -110,6 +110,11 @@ impl<'ctx> Visitor<'ctx> for CodeGenerator<'ctx> {
             TokenKind::Slash => {
                 let left = self.builder.build_signed_int_to_float(left, self.context.f64_type(), "int_to_float");
                 let right = self.builder.build_signed_int_to_float(right, self.context.f64_type(), "int_to_float");
+
+                if right.is_null() {
+                    panic!("Division by zero");
+                }
+
                 self.builder.build_float_div(left, right, "div").into()
             }
             TokenKind::Remainder => self.builder.build_int_signed_rem(left, right, "rem").into(),
@@ -130,7 +135,12 @@ impl<'ctx> Visitor<'ctx> for CodeGenerator<'ctx> {
             TokenKind::Plus => self.builder.build_float_add(left, right, "add").into(),
             TokenKind::Minus => self.builder.build_float_sub(left, right, "sub").into(),
             TokenKind::Asterisk => self.builder.build_float_mul(left, right, "mul").into(),
-            TokenKind::Slash => self.builder.build_float_div(left, right, "div").into(),
+            TokenKind::Slash => {
+                if right.is_null() {
+                    panic!("Division by zero");
+                }
+                self.builder.build_float_div(left, right, "div").into()
+            }
             TokenKind::Remainder => self.builder.build_float_rem(left, right, "rem").into(),
             TokenKind::Greater => self.builder.build_float_compare(FloatPredicate::OGT, left, right, "gt").into(),
             TokenKind::GreaterEqual => self.builder.build_float_compare(FloatPredicate::OGE, left, right, "ge").into(),
@@ -149,7 +159,12 @@ impl<'ctx> Visitor<'ctx> for CodeGenerator<'ctx> {
             TokenKind::Plus => self.builder.build_float_add(left, right, "add").into(),
             TokenKind::Minus => self.builder.build_float_sub(left, right, "sub").into(),
             TokenKind::Asterisk => self.builder.build_float_mul(left, right, "mul").into(),
-            TokenKind::Slash => self.builder.build_float_div(left, right, "div").into(),
+            TokenKind::Slash => {
+                if right.is_null() {
+                    panic!("Division by zero");
+                }
+                self.builder.build_float_div(left, right, "div").into()
+            }
             TokenKind::Remainder => self.builder.build_float_rem(left, right, "rem").into(),
             TokenKind::Greater => self.builder.build_float_compare(FloatPredicate::OGT, left, right, "gt").into(),
             TokenKind::GreaterEqual => self.builder.build_float_compare(FloatPredicate::OGE, left, right, "ge").into(),
@@ -166,7 +181,12 @@ impl<'ctx> Visitor<'ctx> for CodeGenerator<'ctx> {
             TokenKind::Plus => self.builder.build_float_add(left, right, "add").into(),
             TokenKind::Minus => self.builder.build_float_sub(left, right, "sub").into(),
             TokenKind::Asterisk => self.builder.build_float_mul(left, right, "mul").into(),
-            TokenKind::Slash => self.builder.build_float_div(left, right, "div").into(),
+            TokenKind::Slash => {
+                if right.is_null() {
+                    panic!("Division by zero");
+                }
+                self.builder.build_float_div(left, right, "div").into()
+            }
             TokenKind::Remainder => self.builder.build_float_rem(left, right, "rem").into(),
             TokenKind::Greater => self.builder.build_float_compare(FloatPredicate::OGT, left, right, "gt").into(),
             TokenKind::GreaterEqual => self.builder.build_float_compare(FloatPredicate::OGE, left, right, "ge").into(),
