@@ -1,0 +1,5 @@
+let b = 5;
+let h = 4;
+let area = (b * h) / 2;
+
+return area;
