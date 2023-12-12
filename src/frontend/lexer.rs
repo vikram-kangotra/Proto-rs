@@ -50,7 +50,7 @@ impl Lexer {
             self.advance();
         }
 
-        if self.peek_char() == '.' && self.peek_next().is_digit(10) {
+        if self.peek_char() == '.' {
             self.advance();
             while self.peek_char().is_digit(10) {
                 self.advance();
@@ -75,7 +75,26 @@ impl Lexer {
             TokenKind::Int
         };
 
-        Some(Token::new_with_literal(kind, lexeme))
+        Some(Token::new_with_lexeme(kind, lexeme))
+    }
+
+    fn identifier(&mut self) -> Option<Token> {
+        while self.peek_char().is_alphabetic() || self.peek_char().is_digit(10) || self.peek_char() == '_' {
+            self.advance();
+        }
+
+        let lexeme = self.input.chars()
+                        .skip(self.start)
+                        .take(self.current - self.start)
+                        .collect::<String>();
+
+        let kind = match lexeme.as_str() {
+            "true" => TokenKind::True,
+            "false" => TokenKind::False,
+            _ => TokenKind::Ident,
+        };
+
+        Some(Token::new_with_lexeme(kind, lexeme))
     }
 }
 
@@ -103,12 +122,26 @@ impl Iterator for Lexer {
             '}' => Some(Token::new(TokenKind::RBrace)),
             ',' => Some(Token::new(TokenKind::Comma)),
             ';' => Some(Token::new(TokenKind::Semicolon)),
-            '<' => Some(Token::new(TokenKind::Lt)),
-            '>' => Some(Token::new(TokenKind::Gt)),
+            '<' => {
+                if self.peek_char() == '=' {
+                    self.advance();
+                    Some(Token::new(TokenKind::LessEqual))
+                } else {
+                    Some(Token::new(TokenKind::Less))
+                }
+            }
+            '>' => {
+                if self.peek_char() == '=' {
+                    self.advance();
+                    Some(Token::new(TokenKind::GreaterEqual))
+                } else {
+                    Some(Token::new(TokenKind::Greater))
+                }
+            }
             '=' => {
                 if self.peek_char() == '=' {
                     self.advance();
-                    Some(Token::new(TokenKind::Eq))
+                    Some(Token::new(TokenKind::Equal))
                 } else {
                     Some(Token::new(TokenKind::Assign))
                 }
@@ -116,13 +149,13 @@ impl Iterator for Lexer {
             '!' => {
                 if self.peek_char() == '=' {
                     self.advance();
-                    Some(Token::new(TokenKind::NotEq))
+                    Some(Token::new(TokenKind::NotEqual))
                 } else {
                     Some(Token::new(TokenKind::Bang))
                 }
             },
             '0'..='9' => self.number(),
-            '\0' => Some(Token::new(TokenKind::EOF)),
+            'a'..='z' | 'A'..='Z' | '_' => self.identifier(),
             _ => {
                 self.advance();
                 Some(Token::new(TokenKind::Illegal))

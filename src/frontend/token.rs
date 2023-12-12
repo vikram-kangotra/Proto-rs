@@ -12,7 +12,7 @@ impl Token {
         }
     }
 
-    pub fn new_with_literal(kind: TokenKind, lexeme: String) -> Token {
+    pub fn new_with_lexeme(kind: TokenKind, lexeme: String) -> Token {
         Token {
             kind,
             lexeme: Some(lexeme),
@@ -24,7 +24,6 @@ impl Token {
 pub enum TokenKind {
     #[default]
     Illegal,
-    EOF,
 
     // Identifiers + literals
     Ident,
@@ -39,11 +38,13 @@ pub enum TokenKind {
     Asterisk,
     Slash,
 
-    Lt,
-    Gt,
+    Less,
+    LessEqual,
+    Greater,
+    GreaterEqual,
 
-    Eq,
-    NotEq,
+    Equal,
+    NotEqual,
 
     // Delimiters
     Comma,

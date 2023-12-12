@@ -29,13 +29,13 @@ impl<'ctx> Compiler<'ctx> {
 
         let expr = parser.parse();
 
-        let fn_type = self.context.i32_type().fn_type(&[], false);
+        let fn_type = self.context.i64_type().fn_type(&[], false);
         let function = self.module.add_function("main", fn_type, None);
         
         let basic_block = self.context.append_basic_block(function, "entry");
         self.builder.position_at_end(basic_block);
         
-        let mut generator = CodeGenerator::new(&self.builder);
+        let mut generator = CodeGenerator::new(&self.context, &self.builder);
         let value = generator.generate_code(expr.as_ref());
         let _ = self.builder.build_return(Some(&value));
 

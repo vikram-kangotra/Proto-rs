@@ -32,9 +32,15 @@ pub struct LiteralExpr<'ctx> {
 }
 
 impl<'ctx> LiteralExpr<'ctx> {
-    pub fn new_i64(context: &'ctx Context, value: i64) -> Self {
+    pub fn new_int(context: &'ctx Context, value: i64) -> Self {
         Self {
             value: context.i64_type().const_int(value as u64, false).into(),
+        } 
+    }
+
+    pub fn new_float(context: &'ctx Context, value: f64) -> Self {
+        Self {
+            value: context.f64_type().const_float(value).into(),
         } 
     }
 }

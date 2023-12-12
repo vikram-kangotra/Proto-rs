@@ -26,7 +26,29 @@ impl<'ctx> Parser<'ctx> {
     }
 
     fn expression(&mut self) -> Box<dyn Expr<'ctx> + 'ctx> {
-        self.term()
+        self.equality()
+    }
+
+    fn equality(&mut self) -> Box<dyn Expr<'ctx> + 'ctx> {
+        let mut left = self.comparison();
+
+        while let TokenKind::NotEqual | TokenKind::Equal = self.lexer.peek().unwrap_or(&Token::default()).kind {
+            let op = self.lexer.next().unwrap();
+            let right = self.comparison();
+            left = Box::new(BinaryExpr::new(left, op, right) as BinaryExpr<'ctx>);
+        }
+        left
+    }
+
+    fn comparison(&mut self) -> Box<dyn Expr<'ctx> + 'ctx> {
+        let mut left = self.term();
+
+        while let TokenKind::Greater | TokenKind::GreaterEqual | TokenKind::Less | TokenKind::LessEqual = self.lexer.peek().unwrap_or(&Token::default()).kind {
+            let op = self.lexer.next().unwrap();
+            let right = self.term();
+            left = Box::new(BinaryExpr::new(left, op, right) as BinaryExpr<'ctx>);
+        }
+        left
     }
 
     fn term(&mut self) -> Box<dyn Expr<'ctx> + 'ctx> {
@@ -61,12 +83,26 @@ impl<'ctx> Parser<'ctx> {
     }
 
     fn primary(&mut self) -> Box<dyn Expr<'ctx> + 'ctx> {
+
         match self.lexer.peek().unwrap_or(&Token::default()).kind {
             TokenKind::Int => {
                 let token = self.lexer.next().unwrap();
                 let value = token.lexeme.unwrap().parse::<i64>().unwrap();
-                Box::new(LiteralExpr::new_i64(self.context, value) as LiteralExpr<'ctx>)
+                Box::new(LiteralExpr::new_int(self.context, value) as LiteralExpr<'ctx>)
             },
+            TokenKind::Float => {
+                let token = self.lexer.next().unwrap();
+                let value = token.lexeme.unwrap().parse::<f64>().unwrap();
+                Box::new(LiteralExpr::new_float(self.context, value) as LiteralExpr<'ctx>)
+            },
+            TokenKind::False => {
+                self.lexer.next();
+                Box::new(LiteralExpr::new_int(self.context, 0) as LiteralExpr<'ctx>)
+            }
+            TokenKind::True => {
+                self.lexer.next();
+                Box::new(LiteralExpr::new_int(self.context, 1) as LiteralExpr<'ctx>)
+            }
             TokenKind::LParen => {
                 self.lexer.next();
                 let expr = self.expression();
