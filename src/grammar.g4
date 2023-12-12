@@ -3,12 +3,18 @@ INT: DIGIT+;
 FLOAT: DIGIT+ '.' DIGIT+ EXPONENT?;
 EXPONENT: [eE][+-]? DIGIT+;
 
-IDENT: [a-zA-Z_]+ [a-zA-Z_0-9]* | 'true' | 'false';
+TRUE: 'true';
+FALSE: 'false';
+IDENT: [a-zA-Z_]+ [a-zA-Z_0-9]*;
 
-expr: comparison;
+stmt: assignment | exprStmt;
+exprStmt: expr ';' ;
+assignment: 'let' IDENT '=' exprStmt;
+
+expr: equality;
 equality: comparison (('==' | '!=') comparison)*;
 comparison: term (('>' | '>=' | '<' | '<=') term)*;
 term: factor ([+-] factor)*;
-factor: unary ([+/] unary)*;
+factor: unary ([*/%] unary)*;
 unary: [+-] unary | primary;
-primary: INT | FLOAT | IDENT | '(' expr ')';
+primary: INT | FLOAT | IDENT | TRUE | FALSE | '(' expr ')';

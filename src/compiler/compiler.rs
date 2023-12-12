@@ -27,7 +27,7 @@ impl<'ctx> Compiler<'ctx> {
         let lexer = Lexer::new(source);
         let mut parser = Parser::new(&self.context, lexer);
 
-        let expr = parser.parse();
+        let stmts = parser.parse();
 
         let fn_type = self.context.i64_type().fn_type(&[], false);
         let function = self.module.add_function("main", fn_type, None);
@@ -36,9 +36,11 @@ impl<'ctx> Compiler<'ctx> {
         self.builder.position_at_end(basic_block);
         
         let mut generator = CodeGenerator::new(&self.context, &self.builder);
-        let value = generator.generate_code(expr.as_ref());
-        let _ = self.builder.build_return(Some(&value));
 
+        for stmt in stmts {
+            generator.generate_code(stmt.as_ref());
+        }
+        
         Ok(())
     }
 

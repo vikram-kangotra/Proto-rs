@@ -1,36 +1,74 @@
+use std::collections::HashMap;
+
 use inkwell::FloatPredicate;
 use inkwell::context::Context;
 use inkwell::values::{IntValue, FloatValue};
 use inkwell::{builder::Builder, values::BasicValueEnum};
 use crate::code_generator::CodeGenerator;
-use crate::frontend::expr::{Expr, BinaryExpr, LiteralExpr, UnaryExpr};
+use crate::frontend::expr::{BinaryExpr, LiteralExpr, UnaryExpr, VariableExpr};
+use crate::frontend::stmt::{Stmt, ExprStmt, VarDeclStmt, ReturnStmt};
 use crate::frontend::visitor::Visitor;
 use crate::frontend::token::TokenKind;
+
+use super::VariableInfo;
 
 impl<'ctx> CodeGenerator<'ctx> {
     pub fn new(context: &'ctx Context,builder: &'ctx Builder<'ctx>) -> CodeGenerator<'ctx> {
         CodeGenerator {
             context,
             builder,
+            symbol_table: HashMap::new(),
         }
     }
 
-    pub fn generate_code(&mut self, expr: &dyn Expr<'ctx>) -> BasicValueEnum<'ctx> {
-        expr.accept(self)
+    pub fn generate_code(&mut self, stmt: &dyn Stmt<'ctx>) {
+        stmt.accept(self)
     }
 }
 
 impl<'ctx> Visitor<'ctx> for CodeGenerator<'ctx> {
 
+    fn visit_expr_stmt(&mut self, stmt: &ExprStmt<'ctx>) {
+        stmt.expr.accept(self);
+    }
+
+    fn visit_var_decl_stmt(&mut self, stmt: &VarDeclStmt<'ctx>) {
+        let name = stmt.name.to_owned();
+        let value = stmt.expr.as_ref().accept(self);
+
+        let alloca = self.builder.build_alloca(value.get_type(), &name);
+        self.builder.build_store(alloca, value);
+
+        let variable_info = VariableInfo {
+            type_: value.get_type(),
+            alloca,
+        };
+        self.symbol_table.insert(name, variable_info);
+    }
+
+    fn visit_return_stmt(&mut self, stmt: &ReturnStmt<'ctx>) {
+        let value = stmt.expr.as_ref().accept(self);
+        self.builder.build_return(Some(&value));
+    }
+
     fn visit_literal_expr(&mut self, expr: &LiteralExpr<'ctx>) -> BasicValueEnum<'ctx> {
         expr.value
     }
 
+    fn visit_variable_expr(&mut self, expr: &VariableExpr) -> BasicValueEnum<'ctx> {
+        let name = expr.name.to_owned();
+        let variable_info = self.symbol_table.get(&name).unwrap();
+        let type_ = variable_info.type_;
+        let alloca = variable_info.alloca;
+        self.builder.build_load(type_, alloca, &name)
+    }
+
     fn visit_unary_expr(&mut self, expr: &UnaryExpr<'ctx>) -> BasicValueEnum<'ctx> {
-        let operand = self.generate_code(expr.right.as_ref());
+        let operand = expr.right.as_ref().accept(self);
 
         match operand {
             BasicValueEnum::IntValue(value) => self.visit_unary_expr_int(value, expr),
+            BasicValueEnum::FloatValue(value) => self.visit_unary_expr_float(value, expr),
             _ => panic!("Unexpected token"),
         }
     }
@@ -52,8 +90,8 @@ impl<'ctx> Visitor<'ctx> for CodeGenerator<'ctx> {
     }
 
     fn visit_binary_expr(&mut self, expr: &BinaryExpr<'ctx>) -> BasicValueEnum<'ctx> {
-        let left = self.generate_code(expr.left.as_ref());
-        let right = self.generate_code(expr.right.as_ref());
+        let left = expr.left.as_ref().accept(self);
+        let right = expr.right.as_ref().accept(self);
 
         match (left, right) {
             (BasicValueEnum::IntValue(left), BasicValueEnum::IntValue(right)) => self.visit_binary_expr_int_int(left, right, expr),
@@ -74,6 +112,7 @@ impl<'ctx> Visitor<'ctx> for CodeGenerator<'ctx> {
                 let right = self.builder.build_signed_int_to_float(right, self.context.f64_type(), "int_to_float");
                 self.builder.build_float_div(left, right, "div").into()
             }
+            TokenKind::Remainder => self.builder.build_int_signed_rem(left, right, "rem").into(),
             TokenKind::Greater => self.builder.build_int_compare(inkwell::IntPredicate::SGT, left, right, "gt").into(),
             TokenKind::GreaterEqual => self.builder.build_int_compare(inkwell::IntPredicate::SGE, left, right, "ge").into(),
             TokenKind::Less => self.builder.build_int_compare(inkwell::IntPredicate::SLT, left, right, "lt").into(),
@@ -92,6 +131,7 @@ impl<'ctx> Visitor<'ctx> for CodeGenerator<'ctx> {
             TokenKind::Minus => self.builder.build_float_sub(left, right, "sub").into(),
             TokenKind::Asterisk => self.builder.build_float_mul(left, right, "mul").into(),
             TokenKind::Slash => self.builder.build_float_div(left, right, "div").into(),
+            TokenKind::Remainder => self.builder.build_float_rem(left, right, "rem").into(),
             TokenKind::Greater => self.builder.build_float_compare(FloatPredicate::OGT, left, right, "gt").into(),
             TokenKind::GreaterEqual => self.builder.build_float_compare(FloatPredicate::OGE, left, right, "ge").into(),
             TokenKind::Less => self.builder.build_float_compare(FloatPredicate::OLT, left, right, "lt").into(),
@@ -110,6 +150,7 @@ impl<'ctx> Visitor<'ctx> for CodeGenerator<'ctx> {
             TokenKind::Minus => self.builder.build_float_sub(left, right, "sub").into(),
             TokenKind::Asterisk => self.builder.build_float_mul(left, right, "mul").into(),
             TokenKind::Slash => self.builder.build_float_div(left, right, "div").into(),
+            TokenKind::Remainder => self.builder.build_float_rem(left, right, "rem").into(),
             TokenKind::Greater => self.builder.build_float_compare(FloatPredicate::OGT, left, right, "gt").into(),
             TokenKind::GreaterEqual => self.builder.build_float_compare(FloatPredicate::OGE, left, right, "ge").into(),
             TokenKind::Less => self.builder.build_float_compare(FloatPredicate::OLT, left, right, "lt").into(),
@@ -126,6 +167,7 @@ impl<'ctx> Visitor<'ctx> for CodeGenerator<'ctx> {
             TokenKind::Minus => self.builder.build_float_sub(left, right, "sub").into(),
             TokenKind::Asterisk => self.builder.build_float_mul(left, right, "mul").into(),
             TokenKind::Slash => self.builder.build_float_div(left, right, "div").into(),
+            TokenKind::Remainder => self.builder.build_float_rem(left, right, "rem").into(),
             TokenKind::Greater => self.builder.build_float_compare(FloatPredicate::OGT, left, right, "gt").into(),
             TokenKind::GreaterEqual => self.builder.build_float_compare(FloatPredicate::OGE, left, right, "ge").into(),
             TokenKind::Less => self.builder.build_float_compare(FloatPredicate::OLT, left, right, "lt").into(),
@@ -135,4 +177,5 @@ impl<'ctx> Visitor<'ctx> for CodeGenerator<'ctx> {
             _ => panic!("Unexpected token"),
         } 
     }
+
 }

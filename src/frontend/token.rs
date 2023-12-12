@@ -2,20 +2,26 @@
 pub struct Token {
     pub kind: TokenKind,
     pub lexeme: Option<String>,
+    pub line: usize,
+    pub column: usize,
 }
 
 impl Token {
-    pub fn new(kind: TokenKind) -> Token {
+    pub fn new(kind: TokenKind, line: usize, column: usize) -> Token {
         Token {
             kind,
             lexeme: None,
+            line,
+            column,
         }
     }
 
-    pub fn new_with_lexeme(kind: TokenKind, lexeme: String) -> Token {
+    pub fn new_with_lexeme(kind: TokenKind, line: usize, column: usize, lexeme: String) -> Token {
         Token {
             kind,
             lexeme: Some(lexeme),
+            line,
+            column,
         }
     }
 }
@@ -27,6 +33,7 @@ pub enum TokenKind {
 
     // Identifiers + literals
     Ident,
+    Char,
     Int,
     Float,
 
@@ -37,6 +44,7 @@ pub enum TokenKind {
     Bang,
     Asterisk,
     Slash,
+    Remainder,
 
     Less,
     LessEqual,

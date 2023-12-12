@@ -7,6 +7,9 @@ use crate::frontend::token::TokenKind;
 
 use std::iter::Peekable;
 
+use super::expr::VariableExpr;
+use super::stmt::{Stmt, ExprStmt, VarDeclStmt, ReturnStmt};
+
 pub struct Parser<'ctx> {
     context: &'ctx Context,
     lexer: Peekable<Lexer>,
@@ -21,8 +24,52 @@ impl<'ctx> Parser<'ctx> {
         }
     }
 
-    pub fn parse(&mut self) -> Box<dyn Expr<'ctx> + 'ctx> {
-        self.expression()
+    pub fn parse(&mut self) -> Vec<Box<dyn Stmt<'ctx> + 'ctx>> {
+        let mut statements = Vec::new();
+
+        while let Some(_) = self.lexer.peek() {
+            statements.push(self.statement());
+        }
+
+        statements
+    }
+
+    fn statement(&mut self) -> Box<dyn Stmt<'ctx> + 'ctx> {
+        match self.lexer.peek().unwrap_or(&Token::default()).kind {
+            TokenKind::Let => self.var_decl_statement(),
+            TokenKind::Return => self.return_statement(),
+            _ => self.expression_statement(),
+        }
+    }
+
+    fn consume(&mut self, kind: TokenKind) {
+        if self.lexer.peek().unwrap_or(&Token::default()).kind == kind {
+            self.lexer.next();
+        } else {
+            panic!("Expected {:?} but got {:?}", kind, self.lexer.peek().unwrap_or(&Token::default()).kind);
+        }
+    }
+
+    fn var_decl_statement(&mut self) -> Box<dyn Stmt<'ctx> + 'ctx> {
+        self.consume(TokenKind::Let);
+        let name = self.lexer.next().unwrap().lexeme.unwrap(); // error handling
+        self.consume(TokenKind::Assign);
+        let expr = self.expression();
+        self.consume(TokenKind::Semicolon);
+        Box::new(VarDeclStmt::new(name, expr) as VarDeclStmt<'ctx>)
+    }
+
+    fn expression_statement(&mut self) -> Box<dyn Stmt<'ctx> + 'ctx> {
+        let expr = self.expression();
+        self.consume(TokenKind::Semicolon);
+        Box::new(ExprStmt::new(expr) as ExprStmt<'ctx>)
+    }
+
+    fn return_statement(&mut self) -> Box<dyn Stmt<'ctx> + 'ctx> {
+        self.consume(TokenKind::Return);
+        let expr = self.expression();
+        self.consume(TokenKind::Semicolon);
+        Box::new(ReturnStmt::new(expr) as ReturnStmt<'ctx>)
     }
 
     fn expression(&mut self) -> Box<dyn Expr<'ctx> + 'ctx> {
@@ -64,7 +111,7 @@ impl<'ctx> Parser<'ctx> {
 
     fn factor(&mut self) -> Box<dyn Expr<'ctx> + 'ctx> {
         let mut left = self.unary(); 
-        while let TokenKind::Asterisk | TokenKind::Slash = self.lexer.peek().unwrap_or(&Token::default()).kind {
+        while let TokenKind::Asterisk | TokenKind::Slash | TokenKind::Remainder = self.lexer.peek().unwrap_or(&Token::default()).kind {
             let op = self.lexer.next().unwrap();
             let right = self.unary();
             left = Box::new(BinaryExpr::new(left, op, right) as BinaryExpr<'ctx>);
@@ -85,9 +132,14 @@ impl<'ctx> Parser<'ctx> {
     fn primary(&mut self) -> Box<dyn Expr<'ctx> + 'ctx> {
 
         match self.lexer.peek().unwrap_or(&Token::default()).kind {
+            TokenKind::Char => {
+                let token = self.lexer.next().unwrap();
+                let value = token.lexeme.unwrap().chars().next().unwrap();
+                Box::new(LiteralExpr::new_char(self.context, value) as LiteralExpr<'ctx>)
+            }
             TokenKind::Int => {
                 let token = self.lexer.next().unwrap();
-                let value = token.lexeme.unwrap().parse::<i64>().unwrap();
+                let value = token.lexeme.unwrap().parse::<i128>().unwrap();
                 Box::new(LiteralExpr::new_int(self.context, value) as LiteralExpr<'ctx>)
             },
             TokenKind::Float => {
@@ -97,23 +149,31 @@ impl<'ctx> Parser<'ctx> {
             },
             TokenKind::False => {
                 self.lexer.next();
-                Box::new(LiteralExpr::new_int(self.context, 0) as LiteralExpr<'ctx>)
+                Box::new(LiteralExpr::new_int8(self.context, 0) as LiteralExpr<'ctx>)
             }
             TokenKind::True => {
                 self.lexer.next();
-                Box::new(LiteralExpr::new_int(self.context, 1) as LiteralExpr<'ctx>)
+                Box::new(LiteralExpr::new_int8(self.context, 1) as LiteralExpr<'ctx>)
             }
             TokenKind::LParen => {
                 self.lexer.next();
                 let expr = self.expression();
-                if let TokenKind::RParen = self.lexer.peek().unwrap_or(&Token::default()).kind {
-                    self.lexer.next();
-                } else {
-                    panic!("Syntax Error: Expected closing parenthesis");
-                }
+                self.consume(TokenKind::RParen);
                 expr
             },
-            _ => panic!("Unexpected token"),
+            TokenKind::Ident => {
+                let token = self.lexer.next().unwrap();
+                let name = token.lexeme.unwrap();
+                Box::new(VariableExpr::new(name))
+            },
+            TokenKind::Illegal => {
+                let token = self.lexer.next().unwrap();
+                panic!("Syntax Error (line: {}, column: {}): {}", token.line, token.column, token.lexeme.unwrap());
+            }
+            _ => {
+                let token = self.lexer.next().unwrap();
+                panic!("Syntax Error (line: {}, column: {}): {:?} '{}'", token.line, token.column, token.kind, token.lexeme.unwrap());
+            }
         }
     }
 

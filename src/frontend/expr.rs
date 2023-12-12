@@ -32,15 +32,28 @@ pub struct LiteralExpr<'ctx> {
 }
 
 impl<'ctx> LiteralExpr<'ctx> {
-    pub fn new_int(context: &'ctx Context, value: i64) -> Self {
+
+    pub fn new_char(context: &'ctx Context, value: char) -> Self {
         Self {
-            value: context.i64_type().const_int(value as u64, false).into(),
+            value: context.i32_type().const_int(value as u64, false).into(),
+        } 
+    }
+
+    pub fn new_int(context: &'ctx Context, value: i128) -> Self {
+        Self {
+            value: context.i128_type().const_int(value as u64, false).into(),
+        } 
+    }
+
+    pub fn new_int8(context: &'ctx Context, value: i8) -> Self {
+        Self {
+            value: context.i8_type().const_int(value as u64, false).into(),
         } 
     }
 
     pub fn new_float(context: &'ctx Context, value: f64) -> Self {
         Self {
-            value: context.f64_type().const_float(value).into(),
+            value: context.f128_type().const_float(value).into(),
         } 
     }
 }
@@ -56,6 +69,19 @@ impl<'ctx> UnaryExpr<'ctx> {
         Self {
             op,
             right,
+        }
+    }
+}
+
+#[derive(Expr)]
+pub struct VariableExpr {
+    pub name: String,
+}
+
+impl<'ctx> VariableExpr {
+    pub fn new(name: String) -> Self {
+        Self {
+            name,
         }
     }
 }
