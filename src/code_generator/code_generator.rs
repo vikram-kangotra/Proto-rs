@@ -103,6 +103,17 @@ impl<'ctx> Visitor<'ctx> for CodeGenerator<'ctx> {
     }
 
     fn visit_binary_expr_int_int(&mut self, left: IntValue<'ctx>, right: IntValue<'ctx>, expr: &BinaryExpr<'ctx>) -> BasicValueEnum<'ctx> {
+
+        if left.get_type() != right.get_type() {
+            if left.get_type().get_bit_width() > right.get_type().get_bit_width() {
+                let right = self.builder.build_int_z_extend(right, left.get_type(), "z_extend");
+                return self.visit_binary_expr_int_int(left, right, expr);
+            } else {
+                let left = self.builder.build_int_z_extend(left, right.get_type(), "z_extend");
+                return self.visit_binary_expr_int_int(left, right, expr);
+            }
+        }
+
         match expr.op.kind {
             TokenKind::Plus => self.builder.build_int_add(left, right, "add").into(),
             TokenKind::Minus => self.builder.build_int_sub(left, right, "sub").into(),
@@ -129,7 +140,7 @@ impl<'ctx> Visitor<'ctx> for CodeGenerator<'ctx> {
     }
 
     fn visit_binary_expr_int_float(&mut self, left: IntValue<'ctx>, right: FloatValue<'ctx>, expr: &BinaryExpr<'ctx>) -> BasicValueEnum<'ctx> {
-        let left = self.builder.build_signed_int_to_float(left, self.context.f64_type(), "int_to_float");
+        let left = self.builder.build_signed_int_to_float(left, right.get_type(), "int_to_float");
 
         match expr.op.kind {
             TokenKind::Plus => self.builder.build_float_add(left, right, "add").into(),
@@ -153,7 +164,7 @@ impl<'ctx> Visitor<'ctx> for CodeGenerator<'ctx> {
     }
 
     fn visit_binary_expr_float_int(&mut self, left: FloatValue<'ctx>, right: IntValue<'ctx>, expr: &BinaryExpr<'ctx>) -> BasicValueEnum<'ctx> {
-        let right = self.builder.build_signed_int_to_float(right, self.context.f64_type(), "int_to_float");
+        let right = self.builder.build_signed_int_to_float(right, left.get_type(), "int_to_float");
 
         match expr.op.kind {
             TokenKind::Plus => self.builder.build_float_add(left, right, "add").into(),

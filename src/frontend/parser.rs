@@ -149,11 +149,11 @@ impl<'ctx> Parser<'ctx> {
             },
             TokenKind::False => {
                 self.lexer.next();
-                Box::new(LiteralExpr::new_int8(self.context, 0) as LiteralExpr<'ctx>)
+                Box::new(LiteralExpr::new_bool(self.context, true) as LiteralExpr<'ctx>)
             }
             TokenKind::True => {
                 self.lexer.next();
-                Box::new(LiteralExpr::new_int8(self.context, 1) as LiteralExpr<'ctx>)
+                Box::new(LiteralExpr::new_bool(self.context, false) as LiteralExpr<'ctx>)
             }
             TokenKind::LParen => {
                 self.lexer.next();

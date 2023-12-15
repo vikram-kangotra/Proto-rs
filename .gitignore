@@ -1,1 +1,4 @@
-/target
+target
+example/code
+example/*.asm
+example/*.o

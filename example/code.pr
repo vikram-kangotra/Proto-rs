@@ -1,5 +1,5 @@
-let b = 5;
-let h = 4;
-let area = (b * h) / 2;
+let b = 3000;
+let h = 13;
+let area = b * h;
 
 return area;
