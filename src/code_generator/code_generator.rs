@@ -6,7 +6,7 @@ use inkwell::values::{IntValue, FloatValue};
 use inkwell::{builder::Builder, values::BasicValueEnum};
 use crate::code_generator::CodeGenerator;
 use crate::frontend::expr::{BinaryExpr, LiteralExpr, UnaryExpr, VariableExpr};
-use crate::frontend::stmt::{Stmt, ExprStmt, VarDeclStmt, ReturnStmt};
+use crate::frontend::stmt::{Stmt, ExprStmt, VarDeclStmt, ReturnStmt, BlockStmt};
 use crate::frontend::visitor::Visitor;
 use crate::frontend::token::TokenKind;
 
@@ -49,6 +49,12 @@ impl<'ctx> Visitor<'ctx> for CodeGenerator<'ctx> {
     fn visit_return_stmt(&mut self, stmt: &ReturnStmt<'ctx>) {
         let value = stmt.expr.as_ref().accept(self);
         self.builder.build_return(Some(&value));
+    }
+
+    fn visit_block_stmt(&mut self, stmt: &BlockStmt<'ctx>) {
+        for stmt in &stmt.stmts {
+            stmt.accept(self);
+        }
     }
 
     fn visit_literal_expr(&mut self, expr: &LiteralExpr<'ctx>) -> BasicValueEnum<'ctx> {

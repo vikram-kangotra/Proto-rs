@@ -1,5 +1,5 @@
-use inkwell::context::{Context, self};
-use inkwell::types::{IntType, FloatType, StringRadix};
+use inkwell::context::Context;
+use inkwell::types::{IntType, FloatType};
 use inkwell::values::BasicValueEnum;
 use crate::frontend::visitor::Visitor;
 use crate::frontend::token::Token;

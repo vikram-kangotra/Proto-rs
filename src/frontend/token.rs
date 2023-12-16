@@ -58,10 +58,10 @@ pub enum TokenKind {
     Comma,
     Semicolon,
 
-    LParen,
-    RParen,
-    LBrace,
-    RBrace,
+    LeftParen,
+    RightParen,
+    LeftBrace,
+    RightBrace,
 
     // Keywords
     Function,

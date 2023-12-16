@@ -8,7 +8,7 @@ use crate::frontend::token::TokenKind;
 use std::iter::Peekable;
 
 use super::expr::VariableExpr;
-use super::stmt::{Stmt, ExprStmt, VarDeclStmt, ReturnStmt};
+use super::stmt::{Stmt, ExprStmt, VarDeclStmt, ReturnStmt, BlockStmt};
 
 pub struct Parser<'ctx> {
     context: &'ctx Context,
@@ -38,6 +38,7 @@ impl<'ctx> Parser<'ctx> {
         match self.lexer.peek().unwrap_or(&Token::default()).kind {
             TokenKind::Let => self.var_decl_statement(),
             TokenKind::Return => self.return_statement(),
+            TokenKind::LeftBrace => self.block_statement(),
             _ => self.expression_statement(),
         }
     }
@@ -57,6 +58,18 @@ impl<'ctx> Parser<'ctx> {
         let expr = self.expression();
         self.consume(TokenKind::Semicolon);
         Box::new(VarDeclStmt::new(name, expr) as VarDeclStmt<'ctx>)
+    }
+
+    fn block_statement(&mut self) -> Box<dyn Stmt<'ctx> + 'ctx> {
+        self.consume(TokenKind::LeftBrace);
+        let mut statements = Vec::new();
+
+        while self.lexer.peek().unwrap_or(&Token::default()).kind != TokenKind::RightBrace {
+            statements.push(self.statement());
+        }
+
+        self.consume(TokenKind::RightBrace);
+        Box::new(BlockStmt::new(statements) as BlockStmt<'ctx>)
     }
 
     fn expression_statement(&mut self) -> Box<dyn Stmt<'ctx> + 'ctx> {
@@ -155,10 +168,10 @@ impl<'ctx> Parser<'ctx> {
                 self.lexer.next();
                 Box::new(LiteralExpr::new_bool(self.context, false) as LiteralExpr<'ctx>)
             }
-            TokenKind::LParen => {
+            TokenKind::LeftParen => {
                 self.lexer.next();
                 let expr = self.expression();
-                self.consume(TokenKind::RParen);
+                self.consume(TokenKind::RightParen);
                 expr
             },
             TokenKind::Ident => {

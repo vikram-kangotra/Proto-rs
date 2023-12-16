@@ -46,3 +46,16 @@ impl<'ctx> ReturnStmt<'ctx> {
         }
     }
 }
+
+#[derive(Stmt)]
+pub struct BlockStmt<'ctx> {
+    pub stmts: Vec<Box<dyn Stmt<'ctx> + 'ctx>>,
+}
+
+impl<'ctx> BlockStmt<'ctx> {
+    pub fn new(stmts: Vec<Box<dyn Stmt<'ctx> + 'ctx>>) -> Self {
+        Self {
+            stmts,
+        }
+    }
+}
