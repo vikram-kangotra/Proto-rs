@@ -107,6 +107,8 @@ impl Lexer {
             "false" => TokenKind::False,
             "let" => TokenKind::Let,
             "return" => TokenKind::Return,
+            "if" => TokenKind::If,
+            "else" => TokenKind::Else,
             _ => TokenKind::Ident,
         };
 

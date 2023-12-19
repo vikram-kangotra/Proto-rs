@@ -59,3 +59,20 @@ impl<'ctx> BlockStmt<'ctx> {
         }
     }
 }
+
+#[derive(Stmt)]
+pub struct IfStmt<'ctx> {
+    pub cond: Box<dyn Expr<'ctx> + 'ctx>,
+    pub then: Box<dyn Stmt<'ctx> + 'ctx>,
+    pub otherwise: Option<Box<dyn Stmt<'ctx> + 'ctx>>,
+}
+
+impl<'ctx> IfStmt<'ctx> {
+    pub fn new(cond: Box<dyn Expr<'ctx> + 'ctx>, then: Box<dyn Stmt<'ctx> + 'ctx>, otherwise: Option<Box<dyn Stmt<'ctx> + 'ctx>>) -> Self {
+        Self {
+            cond,
+            then,
+            otherwise,
+        }
+    }
+}

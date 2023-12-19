@@ -8,7 +8,7 @@ use crate::frontend::token::TokenKind;
 use std::iter::Peekable;
 
 use super::expr::VariableExpr;
-use super::stmt::{Stmt, ExprStmt, VarDeclStmt, ReturnStmt, BlockStmt};
+use super::stmt::{Stmt, ExprStmt, VarDeclStmt, ReturnStmt, BlockStmt, IfStmt};
 
 pub struct Parser<'ctx> {
     context: &'ctx Context,
@@ -39,6 +39,7 @@ impl<'ctx> Parser<'ctx> {
             TokenKind::Let => self.var_decl_statement(),
             TokenKind::Return => self.return_statement(),
             TokenKind::LeftBrace => self.block_statement(),
+            TokenKind::If => self.if_statement(),
             _ => self.expression_statement(),
         }
     }
@@ -70,6 +71,20 @@ impl<'ctx> Parser<'ctx> {
 
         self.consume(TokenKind::RightBrace);
         Box::new(BlockStmt::new(statements) as BlockStmt<'ctx>)
+    }
+
+    fn if_statement(&mut self) -> Box<dyn Stmt<'ctx> + 'ctx> {
+        self.consume(TokenKind::If);
+        let condition = self.expression();
+        let then_branch = self.statement();
+        let else_branch = if self.lexer.peek().unwrap_or(&Token::default()).kind == TokenKind::Else {
+            self.lexer.next();
+            Some(self.statement())
+        } else {
+            None
+        };
+
+        Box::new(IfStmt::new(condition, then_branch, else_branch) as IfStmt<'ctx>)
     }
 
     fn expression_statement(&mut self) -> Box<dyn Stmt<'ctx> + 'ctx> {

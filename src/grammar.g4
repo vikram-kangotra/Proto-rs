@@ -7,10 +7,11 @@ TRUE: 'true';
 FALSE: 'false';
 IDENT: [a-zA-Z_]+ [a-zA-Z_0-9]*;
 
-stmt: assignment | exprStmt | block;
+stmt: assignment | exprStmt | block | if;
 exprStmt: expr ';' ;
 assignment: 'let' IDENT '=' exprStmt;
 block: '{' stmt* '}';
+if: 'if' expr stmt ('else' if)* ('else' stmt)?;
 
 expr: equality;
 equality: comparison (('==' | '!=') comparison)*;
