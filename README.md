@@ -2,6 +2,16 @@
 
 Proto-rs is a compiler written in Rust, utilizing LLVM as its backend. This compiler translates Proto-rs source code into LLVM Intermediate Representation (IR), which can then be further processed by the LLVM toolchain.
 
+# Features
+
+- variable initialization
+- `if-else` condition
+- `return` statements
+- arithmetic operations
+- scoped block statements
+- single line and multiple line comments
+- Outputs Assembly and object files
+
 ## Prerequisites
 Before you proceed, ensure you have the following prerequisites installed:
 
@@ -15,16 +25,6 @@ git clone https://github.com/vikram-kangotra/Proto-rs.git
 cd Proto-rs
 cargo build
 ```
-
-# Features
-
-- variable initialization
-- `if-else` condition
-- `return` statements
-- arithmetic operations
-- scoped block statements
-- single line and multiple line comments
-- Outputs Assembly and object files
 
 # Usage
 Compile Proto-rs source code using the following command:
