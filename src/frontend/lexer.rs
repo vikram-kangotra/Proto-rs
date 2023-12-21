@@ -133,7 +133,28 @@ impl Iterator for Lexer {
             '-' => Some(Token::new(TokenKind::Minus, self.line, self.column)),
             '+' => Some(Token::new(TokenKind::Plus, self.line, self.column)),
             '*' => Some(Token::new(TokenKind::Asterisk, self.line, self.column)),
-            '/' => Some(Token::new(TokenKind::Slash, self.line, self.column)),
+            '/' => {
+                if self.peek_char() == '/' {
+                    while self.peek_char() != '\n' && self.current < self.input.len() {
+                        self.advance();
+                    }
+                    self.line += 1;
+                    self.column = 1;
+                    self.next()
+                } else if self.peek_char() == '*' {
+                    self.advance();
+                    while self.current < self.input.len() && (self.peek_char() != '*' || self.peek_next() != '/') {
+                        self.advance();
+                        self.column += 1;
+                        self.skip_whitespace();
+                    }
+                    self.advance();
+                    self.advance();
+                    self.next()
+                } else {
+                    Some(Token::new(TokenKind::Slash, self.line, self.column))
+                }
+            }
             '%' => Some(Token::new(TokenKind::Remainder, self.line, self.column)),
             '(' => Some(Token::new(TokenKind::LeftParen, self.line, self.column)),
             ')' => Some(Token::new(TokenKind::RightParen, self.line, self.column)),

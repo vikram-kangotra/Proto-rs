@@ -199,8 +199,8 @@ impl<'ctx> Parser<'ctx> {
                 panic!("Syntax Error (line: {}, column: {}): {}", token.line, token.column, token.lexeme.unwrap());
             }
             _ => {
-                let token = self.lexer.next().unwrap();
-                panic!("Syntax Error (line: {}, column: {}): {:?} '{}'", token.line, token.column, token.kind, token.lexeme.unwrap());
+                let token = self.lexer.next().unwrap_or_default();
+                panic!("Syntax Error (line: {}, column: {}): {:?} '{}'", token.line, token.column, token.kind, token.lexeme.unwrap_or_default());
             }
         }
     }

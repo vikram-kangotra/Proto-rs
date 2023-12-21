@@ -23,6 +23,7 @@ cargo build
 - `return` statements
 - arithmetic operations
 - scoped block statements
+- single line and multiple line comments
 - Outputs Assembly and object files
 
 # Usage

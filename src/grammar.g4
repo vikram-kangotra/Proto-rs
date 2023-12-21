@@ -7,6 +7,8 @@ TRUE: 'true';
 FALSE: 'false';
 IDENT: [a-zA-Z_]+ [a-zA-Z_0-9]*;
 
+COMMENT: '//' .* '\n' | '/*' .* '*/'
+
 stmt: assignment | exprStmt | block | if;
 exprStmt: expr ';' ;
 assignment: 'let' IDENT '=' exprStmt;
