@@ -13,5 +13,5 @@ pub struct VariableInfo<'ctx> {
 pub struct CodeGenerator<'ctx> {
     context: &'ctx Context,
     builder: &'ctx Builder<'ctx>,
-    symbol_table: HashMap<String, VariableInfo<'ctx>>,
+    symbol_table: Vec<HashMap<String, VariableInfo<'ctx>>>,
 }

@@ -9,4 +9,6 @@ if (a > b) {
     return a + 2 * b;
 }
 
-return a + b;
+let c = 10;
+
+return c;

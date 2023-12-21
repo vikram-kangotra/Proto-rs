@@ -17,12 +17,20 @@ impl<'ctx> CodeGenerator<'ctx> {
         CodeGenerator {
             context,
             builder,
-            symbol_table: HashMap::new(),
+            symbol_table: vec![HashMap::new()],
         }
     }
 
     pub fn generate_code(&mut self, stmt: &dyn Stmt<'ctx>) {
         stmt.accept(self)
+    }
+
+    fn enter_scope(&mut self) {
+        self.symbol_table.push(HashMap::new());
+    }
+
+    fn exit_scope(&mut self) {
+        self.symbol_table.pop();
     }
 }
 
@@ -43,7 +51,9 @@ impl<'ctx> Visitor<'ctx> for CodeGenerator<'ctx> {
             type_: value.get_type(),
             alloca,
         };
-        self.symbol_table.insert(name, variable_info);
+        if let Some(scope) = self.symbol_table.last_mut() {
+            scope.insert(name, variable_info);
+        }
     }
 
     fn visit_return_stmt(&mut self, stmt: &ReturnStmt<'ctx>) {
@@ -52,9 +62,11 @@ impl<'ctx> Visitor<'ctx> for CodeGenerator<'ctx> {
     }
 
     fn visit_block_stmt(&mut self, stmt: &BlockStmt<'ctx>) {
+        self.enter_scope();
         for stmt in &stmt.stmts {
             stmt.accept(self);
         }
+        self.exit_scope();
     }
 
     fn visit_if_stmt(&mut self, stmt: &IfStmt<'ctx>) {
@@ -85,10 +97,15 @@ impl<'ctx> Visitor<'ctx> for CodeGenerator<'ctx> {
 
     fn visit_variable_expr(&mut self, expr: &VariableExpr) -> BasicValueEnum<'ctx> {
         let name = expr.name.to_owned();
-        let variable_info = self.symbol_table.get(&name).unwrap();
-        let type_ = variable_info.type_;
-        let alloca = variable_info.alloca;
-        self.builder.build_load(type_, alloca, &name)
+
+        for scope in self.symbol_table.iter().rev() {
+            if let Some(variable_info) = scope.get(&name) {
+                let alloca = variable_info.alloca;
+                return self.builder.build_load(variable_info.type_, alloca, &name);
+            }
+        }
+
+        panic!("Variable '{}' not found in current scope", name);
     }
 
     fn visit_unary_expr(&mut self, expr: &UnaryExpr<'ctx>) -> BasicValueEnum<'ctx> {

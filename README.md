@@ -16,6 +16,15 @@ cd Proto-rs
 cargo build
 ```
 
+# Features
+
+- variable initialization
+- `if-else` condition
+- `return` statements
+- arithmetic operations
+- scoped block statements
+- Outputs Assembly and object files
+
 # Usage
 Compile Proto-rs source code using the following command:
 
