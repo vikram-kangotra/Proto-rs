@@ -5,7 +5,7 @@ use inkwell::context::Context;
 use inkwell::values::{IntValue, FloatValue};
 use inkwell::{builder::Builder, values::BasicValueEnum};
 use crate::code_generator::CodeGenerator;
-use crate::frontend::expr::{BinaryExpr, LiteralExpr, UnaryExpr, VariableExpr};
+use crate::frontend::expr::{BinaryExpr, LiteralExpr, UnaryExpr, VariableExpr, VarAssignExpr};
 use crate::frontend::stmt::{Stmt, ExprStmt, VarDeclStmt, ReturnStmt, BlockStmt, IfStmt};
 use crate::frontend::visitor::Visitor;
 use crate::frontend::token::TokenKind;
@@ -102,6 +102,21 @@ impl<'ctx> Visitor<'ctx> for CodeGenerator<'ctx> {
             if let Some(variable_info) = scope.get(&name) {
                 let alloca = variable_info.alloca;
                 return self.builder.build_load(variable_info.type_, alloca, &name);
+            }
+        }
+
+        panic!("Variable '{}' not found in current scope", name);
+    }
+    
+    fn visit_var_assign_expr(&mut self, expr: &VarAssignExpr<'ctx>) -> BasicValueEnum<'ctx> {
+        let name = expr.name.to_owned();
+        let value = expr.value.as_ref().accept(self);
+
+        for scope in self.symbol_table.iter().rev() {
+            if let Some(variable_info) = scope.get(&name) {
+                let alloca = variable_info.alloca;
+                self.builder.build_store(alloca, value);
+                return value;
             }
         }
 

@@ -7,7 +7,7 @@ use crate::frontend::token::TokenKind;
 
 use std::iter::Peekable;
 
-use super::expr::VariableExpr;
+use super::expr::{VariableExpr, VarAssignExpr};
 use super::stmt::{Stmt, ExprStmt, VarDeclStmt, ReturnStmt, BlockStmt, IfStmt};
 
 pub struct Parser<'ctx> {
@@ -192,7 +192,14 @@ impl<'ctx> Parser<'ctx> {
             TokenKind::Ident => {
                 let token = self.lexer.next().unwrap();
                 let name = token.lexeme.unwrap();
-                Box::new(VariableExpr::new(name))
+
+                if self.lexer.peek().unwrap().kind == TokenKind::Assign {
+                    self.lexer.next();
+                    let value = self.expression();
+                    Box::new(VarAssignExpr::new(name, value) as VarAssignExpr<'ctx>)
+                } else {
+                    Box::new(VariableExpr::new(name))
+                }
             },
             TokenKind::Illegal => {
                 let token = self.lexer.next().unwrap();

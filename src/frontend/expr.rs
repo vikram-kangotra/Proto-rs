@@ -106,3 +106,18 @@ impl<'ctx> VariableExpr {
         }
     }
 }
+
+#[derive(Expr)]
+pub struct VarAssignExpr<'ctx> {
+    pub name: String,
+    pub value: Box<dyn Expr<'ctx> + 'ctx>,
+}
+
+impl<'ctx> VarAssignExpr<'ctx> {
+    pub fn new(name: String, value: Box<dyn Expr<'ctx> + 'ctx>) -> Self {
+        Self {
+            name,
+            value,
+        }
+    }
+}

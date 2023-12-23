@@ -9,16 +9,18 @@ IDENT: [a-zA-Z_]+ [a-zA-Z_0-9]*;
 
 COMMENT: '//' .* '\n' | '/*' .* '*/'
 
-stmt: assignment | exprStmt | block | if;
+stmt: initialize | exprStmt | block | if;
 exprStmt: expr ';' ;
-assignment: 'let' IDENT '=' exprStmt;
+initialize: 'let' IDENT '=' exprStmt;
 block: '{' stmt* '}';
 if: 'if' expr stmt ('else' if)* ('else' stmt)?;
 
 expr: equality;
+assignment: IDENT ('=' expr)?;
+
 equality: comparison (('==' | '!=') comparison)*;
 comparison: term (('>' | '>=' | '<' | '<=') term)*;
 term: factor ([+-] factor)*;
 factor: unary ([*/%] unary)*;
 unary: [+-] unary | primary;
-primary: INT | FLOAT | IDENT | TRUE | FALSE | '(' expr ')';
+primary: INT | FLOAT | TRUE | FALSE | '(' expr ')' | assignment;

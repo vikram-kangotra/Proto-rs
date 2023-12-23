@@ -1,11 +1,12 @@
 use inkwell::values::{BasicValueEnum, IntValue, FloatValue};
 use crate::frontend::expr::{BinaryExpr, LiteralExpr, UnaryExpr};
 
-use super::{stmt::{ExprStmt, VarDeclStmt, ReturnStmt, BlockStmt, IfStmt}, expr::VariableExpr};
+use super::{stmt::{ExprStmt, VarDeclStmt, ReturnStmt, BlockStmt, IfStmt}, expr::{VariableExpr, VarAssignExpr}};
 
 pub trait Visitor<'ctx> {
     fn visit_literal_expr(&mut self, expr: &LiteralExpr<'ctx>) -> BasicValueEnum<'ctx>;
     fn visit_variable_expr(&mut self, expr: &VariableExpr) -> BasicValueEnum<'ctx>;
+    fn visit_var_assign_expr(&mut self, expr: &VarAssignExpr<'ctx>) -> BasicValueEnum<'ctx>;
 
     fn visit_unary_expr(&mut self, expr: &UnaryExpr<'ctx>) -> BasicValueEnum<'ctx>;
     fn visit_unary_expr_int(&mut self, value: IntValue<'ctx>, expr: &UnaryExpr<'ctx>) -> BasicValueEnum<'ctx>;
