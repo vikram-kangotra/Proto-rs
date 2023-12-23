@@ -8,7 +8,7 @@ use crate::frontend::token::TokenKind;
 use std::iter::Peekable;
 
 use super::expr::{VariableExpr, VarAssignExpr};
-use super::stmt::{Stmt, ExprStmt, VarDeclStmt, ReturnStmt, BlockStmt, IfStmt, WhileStmt};
+use super::stmt::{Stmt, ExprStmt, VarDeclStmt, ReturnStmt, BlockStmt, IfStmt, WhileStmt, BreakStmt};
 
 pub struct Parser<'ctx> {
     context: &'ctx Context,
@@ -41,6 +41,7 @@ impl<'ctx> Parser<'ctx> {
             TokenKind::LeftBrace => self.block_statement(),
             TokenKind::If => self.if_statement(),
             TokenKind::While => self.while_statement(),
+            TokenKind::Break => self.break_statement(),
             _ => self.expression_statement(),
         }
     }
@@ -94,6 +95,12 @@ impl<'ctx> Parser<'ctx> {
         let body = self.statement();
 
         Box::new(WhileStmt::new(condition, body) as WhileStmt<'ctx>)
+    }
+
+    fn break_statement(&mut self) -> Box<dyn Stmt<'ctx> + 'ctx> {
+        self.consume(TokenKind::Break);
+        self.consume(TokenKind::Semicolon);
+        Box::new(BreakStmt::new() as BreakStmt)
     }
 
     fn expression_statement(&mut self) -> Box<dyn Stmt<'ctx> + 'ctx> {

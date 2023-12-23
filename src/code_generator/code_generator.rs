@@ -6,7 +6,7 @@ use inkwell::values::{IntValue, FloatValue};
 use inkwell::{builder::Builder, values::BasicValueEnum};
 use crate::code_generator::CodeGenerator;
 use crate::frontend::expr::{BinaryExpr, LiteralExpr, UnaryExpr, VariableExpr, VarAssignExpr};
-use crate::frontend::stmt::{Stmt, ExprStmt, VarDeclStmt, ReturnStmt, BlockStmt, IfStmt, WhileStmt};
+use crate::frontend::stmt::{Stmt, ExprStmt, VarDeclStmt, ReturnStmt, BlockStmt, IfStmt, WhileStmt, BreakStmt};
 use crate::frontend::visitor::Visitor;
 use crate::frontend::token::TokenKind;
 
@@ -18,6 +18,7 @@ impl<'ctx> CodeGenerator<'ctx> {
             context,
             builder,
             symbol_table: vec![HashMap::new()],
+            break_block_stack: vec![],
         }
     }
 
@@ -70,45 +71,72 @@ impl<'ctx> Visitor<'ctx> for CodeGenerator<'ctx> {
     }
 
     fn visit_if_stmt(&mut self, stmt: &IfStmt<'ctx>) {
+        let function = self.builder.get_insert_block().unwrap().get_parent().unwrap();
+        let cond_block = self.context.append_basic_block(function, "if_cond");
+        let then_block = self.context.append_basic_block(function, "then");
+        let end_block = self.context.append_basic_block(function, "if_end");
+
+        let else_block = if stmt.otherwise.is_some() {
+            self.context.append_basic_block(function, "else")
+        } else {
+            end_block
+        };
+
+        self.builder.build_unconditional_branch(cond_block);
+        self.builder.position_at_end(cond_block);
         let condition = stmt.cond.as_ref().accept(self);
         let condition = condition.into_int_value();
-
-        let function = self.builder.get_insert_block().unwrap().get_parent().unwrap();
-        let then_block = self.context.append_basic_block(function, "then");
-        let else_block = self.context.append_basic_block(function, "else");
-        let merge_block = self.context.append_basic_block(function, "merge");
 
         self.builder.build_conditional_branch(condition, then_block, else_block);
 
         self.builder.position_at_end(then_block);
         stmt.then.accept(self);
-        self.builder.build_unconditional_branch(merge_block);
+        self.builder.build_unconditional_branch(end_block);
 
-        self.builder.position_at_end(else_block);
-        stmt.otherwise.as_ref().map(|branch| branch.accept(self));
-        self.builder.build_unconditional_branch(merge_block);
+        if let Some(otherwise) = &stmt.otherwise {
+            self.builder.position_at_end(else_block);
+            otherwise.accept(self);
+            self.builder.build_unconditional_branch(end_block);
+        }
 
-        self.builder.position_at_end(merge_block);
+        self.builder.position_at_end(end_block);
     }
     
     fn visit_while_stmt(&mut self, stmt: &WhileStmt<'ctx>) {
         let function = self.builder.get_insert_block().unwrap().get_parent().unwrap();
-        let cond_block = self.context.append_basic_block(function, "cond");
+        let cond_block = self.context.append_basic_block(function, "while_cond");
         let body_block = self.context.append_basic_block(function, "body");
-        let merge_block = self.context.append_basic_block(function, "merge");
+        let end_block = self.context.append_basic_block(function, "while_end");
 
         self.builder.build_unconditional_branch(cond_block);
 
         self.builder.position_at_end(cond_block);
         let condition = stmt.cond.as_ref().accept(self);
         let condition = condition.into_int_value();
-        self.builder.build_conditional_branch(condition, body_block, merge_block);
+        self.builder.build_conditional_branch(condition, body_block, end_block);
 
         self.builder.position_at_end(body_block);
+
+        self.break_block_stack.push(end_block);
         stmt.body.accept(self);
+        self.break_block_stack.pop();
+
         self.builder.build_unconditional_branch(cond_block);
 
-        self.builder.position_at_end(merge_block);
+        self.builder.position_at_end(end_block);
+    }
+
+    fn visit_break_stmt(&mut self, _stmt: &BreakStmt) {
+        println!("{}", self.break_block_stack.len());
+        let break_block = self.break_block_stack.last();
+        if let Some(break_block) = break_block {
+            self.builder.build_unconditional_branch(*break_block);
+            let function = self.builder.get_insert_block().unwrap().get_parent().unwrap();
+            let end_block = self.context.append_basic_block(function, "break_end");
+            self.builder.position_at_end(end_block);
+        } else {
+            panic!("Break statement outside of loop");
+        }
     }
 
     fn visit_literal_expr(&mut self, expr: &LiteralExpr<'ctx>) -> BasicValueEnum<'ctx> {

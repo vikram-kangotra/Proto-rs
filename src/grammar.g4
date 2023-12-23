@@ -6,15 +6,21 @@ EXPONENT: [eE][+-]? DIGIT+;
 TRUE: 'true';
 FALSE: 'false';
 IDENT: [a-zA-Z_]+ [a-zA-Z_0-9]*;
+LET: 'let';
+IF: 'if';
+ELSE: 'else';
+WHILE: 'while';
+BREAK: 'break';
 
 COMMENT: '//' .* '\n' | '/*' .* '*/'
 
 stmt: initialize | exprStmt | block | if | while;
 exprStmt: expr ';' ;
-initialize: 'let' IDENT '=' exprStmt;
+breakStmt: BREAK ';' ;
+initialize: LET IDENT '=' exprStmt;
 block: '{' stmt* '}';
-if: 'if' expr stmt ('else' if)* ('else' stmt)?;
-while: 'while' expr stmt;
+if: IF expr stmt (ELSE if)* (ELSE stmt)?;
+while: WHILE expr stmt;
 
 expr: equality;
 assignment: IDENT ('=' expr)?;

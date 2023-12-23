@@ -91,3 +91,12 @@ impl<'ctx> WhileStmt<'ctx> {
         }
     }
 }
+
+#[derive(Stmt)]
+pub struct BreakStmt;
+
+impl BreakStmt {
+    pub fn new() -> Self {
+        Self
+    }
+}
