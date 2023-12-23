@@ -1,7 +1,7 @@
 use inkwell::values::{BasicValueEnum, IntValue, FloatValue};
 use crate::frontend::expr::{BinaryExpr, LiteralExpr, UnaryExpr};
 
-use super::{stmt::{ExprStmt, VarDeclStmt, ReturnStmt, BlockStmt, IfStmt}, expr::{VariableExpr, VarAssignExpr}};
+use super::{stmt::{ExprStmt, VarDeclStmt, ReturnStmt, BlockStmt, IfStmt, WhileStmt}, expr::{VariableExpr, VarAssignExpr}};
 
 pub trait Visitor<'ctx> {
     fn visit_literal_expr(&mut self, expr: &LiteralExpr<'ctx>) -> BasicValueEnum<'ctx>;
@@ -23,4 +23,5 @@ pub trait Visitor<'ctx> {
     fn visit_return_stmt(&mut self, expr: &ReturnStmt<'ctx>);
     fn visit_block_stmt(&mut self, expr: &BlockStmt<'ctx>);
     fn visit_if_stmt(&mut self, expr: &IfStmt<'ctx>);
+    fn visit_while_stmt(&mut self, expr: &WhileStmt<'ctx>);
 }

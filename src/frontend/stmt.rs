@@ -76,3 +76,18 @@ impl<'ctx> IfStmt<'ctx> {
         }
     }
 }
+
+#[derive(Stmt)]
+pub struct WhileStmt<'ctx> {
+    pub cond: Box<dyn Expr<'ctx> + 'ctx>,
+    pub body: Box<dyn Stmt<'ctx> + 'ctx>,
+}
+
+impl<'ctx> WhileStmt<'ctx> {
+    pub fn new(cond: Box<dyn Expr<'ctx> + 'ctx>, body: Box<dyn Stmt<'ctx> + 'ctx>) -> Self {
+        Self {
+            cond,
+            body,
+        }
+    }
+}

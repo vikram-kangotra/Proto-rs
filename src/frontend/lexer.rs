@@ -109,6 +109,7 @@ impl Lexer {
             "return" => TokenKind::Return,
             "if" => TokenKind::If,
             "else" => TokenKind::Else,
+            "while" => TokenKind::While,
             _ => TokenKind::Ident,
         };
 

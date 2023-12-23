@@ -6,7 +6,7 @@ use inkwell::values::{IntValue, FloatValue};
 use inkwell::{builder::Builder, values::BasicValueEnum};
 use crate::code_generator::CodeGenerator;
 use crate::frontend::expr::{BinaryExpr, LiteralExpr, UnaryExpr, VariableExpr, VarAssignExpr};
-use crate::frontend::stmt::{Stmt, ExprStmt, VarDeclStmt, ReturnStmt, BlockStmt, IfStmt};
+use crate::frontend::stmt::{Stmt, ExprStmt, VarDeclStmt, ReturnStmt, BlockStmt, IfStmt, WhileStmt};
 use crate::frontend::visitor::Visitor;
 use crate::frontend::token::TokenKind;
 
@@ -87,6 +87,26 @@ impl<'ctx> Visitor<'ctx> for CodeGenerator<'ctx> {
         self.builder.position_at_end(else_block);
         stmt.otherwise.as_ref().map(|branch| branch.accept(self));
         self.builder.build_unconditional_branch(merge_block);
+
+        self.builder.position_at_end(merge_block);
+    }
+    
+    fn visit_while_stmt(&mut self, stmt: &WhileStmt<'ctx>) {
+        let function = self.builder.get_insert_block().unwrap().get_parent().unwrap();
+        let cond_block = self.context.append_basic_block(function, "cond");
+        let body_block = self.context.append_basic_block(function, "body");
+        let merge_block = self.context.append_basic_block(function, "merge");
+
+        self.builder.build_unconditional_branch(cond_block);
+
+        self.builder.position_at_end(cond_block);
+        let condition = stmt.cond.as_ref().accept(self);
+        let condition = condition.into_int_value();
+        self.builder.build_conditional_branch(condition, body_block, merge_block);
+
+        self.builder.position_at_end(body_block);
+        stmt.body.accept(self);
+        self.builder.build_unconditional_branch(cond_block);
 
         self.builder.position_at_end(merge_block);
     }

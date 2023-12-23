@@ -1,5 +1,5 @@
-let a = 30;
-let b = 20;
+let a = 0;
+let b = 1;
 
 /* 
 
@@ -23,6 +23,13 @@ return c;
 
 */
 
-b = b + 2 * 3;
+let c = 0;
+let count = 6;
 
-return a + b;
+while count * count == 36 {
+    c = a + b;
+    a = b;
+    b = c;
+}
+
+return c;

@@ -70,5 +70,6 @@ pub enum TokenKind {
     False,
     If,
     Else,
+    While,
     Return,
 }

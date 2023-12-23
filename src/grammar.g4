@@ -9,11 +9,12 @@ IDENT: [a-zA-Z_]+ [a-zA-Z_0-9]*;
 
 COMMENT: '//' .* '\n' | '/*' .* '*/'
 
-stmt: initialize | exprStmt | block | if;
+stmt: initialize | exprStmt | block | if | while;
 exprStmt: expr ';' ;
 initialize: 'let' IDENT '=' exprStmt;
 block: '{' stmt* '}';
 if: 'if' expr stmt ('else' if)* ('else' stmt)?;
+while: 'while' expr stmt;
 
 expr: equality;
 assignment: IDENT ('=' expr)?;
