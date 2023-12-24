@@ -11,12 +11,14 @@ IF: 'if';
 ELSE: 'else';
 WHILE: 'while';
 BREAK: 'break';
+CONTINUE: 'continue';
 
 COMMENT: '//' .* '\n' | '/*' .* '*/'
 
 stmt: initialize | exprStmt | block | if | while;
 exprStmt: expr ';' ;
 breakStmt: BREAK ';' ;
+continueStmt: CONTINUE ';' ;
 initialize: LET IDENT '=' exprStmt;
 block: '{' stmt* '}';
 if: IF expr stmt (ELSE if)* (ELSE stmt)?;

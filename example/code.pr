@@ -31,14 +31,8 @@ while count < 10 {
     a = b;
     b = c;
 
-    let count1 = c;
-    break;
-
-    while count1 < 10 {
-        c = c + 1;
-        count1 = count1 + 1;
-    }
-
+    count = count + 1;
+    continue;
     count = count + 1;
 }
 

@@ -100,3 +100,12 @@ impl BreakStmt {
         Self
     }
 }
+
+#[derive(Stmt)]
+pub struct ContinueStmt;
+
+impl ContinueStmt {
+    pub fn new() -> Self {
+        Self
+    }
+}

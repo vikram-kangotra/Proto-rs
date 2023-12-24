@@ -6,7 +6,7 @@ use inkwell::values::{IntValue, FloatValue};
 use inkwell::{builder::Builder, values::BasicValueEnum};
 use crate::code_generator::CodeGenerator;
 use crate::frontend::expr::{BinaryExpr, LiteralExpr, UnaryExpr, VariableExpr, VarAssignExpr};
-use crate::frontend::stmt::{Stmt, ExprStmt, VarDeclStmt, ReturnStmt, BlockStmt, IfStmt, WhileStmt, BreakStmt};
+use crate::frontend::stmt::{Stmt, ExprStmt, VarDeclStmt, ReturnStmt, BlockStmt, IfStmt, WhileStmt, BreakStmt, ContinueStmt};
 use crate::frontend::visitor::Visitor;
 use crate::frontend::token::TokenKind;
 
@@ -19,6 +19,7 @@ impl<'ctx> CodeGenerator<'ctx> {
             builder,
             symbol_table: vec![HashMap::new()],
             break_block_stack: vec![],
+            continue_block_stack: vec![],
         }
     }
 
@@ -117,9 +118,11 @@ impl<'ctx> Visitor<'ctx> for CodeGenerator<'ctx> {
 
         self.builder.position_at_end(body_block);
 
+        self.continue_block_stack.push(cond_block);
         self.break_block_stack.push(end_block);
         stmt.body.accept(self);
         self.break_block_stack.pop();
+        self.continue_block_stack.pop();
 
         self.builder.build_unconditional_branch(cond_block);
 
@@ -127,7 +130,6 @@ impl<'ctx> Visitor<'ctx> for CodeGenerator<'ctx> {
     }
 
     fn visit_break_stmt(&mut self, _stmt: &BreakStmt) {
-        println!("{}", self.break_block_stack.len());
         let break_block = self.break_block_stack.last();
         if let Some(break_block) = break_block {
             self.builder.build_unconditional_branch(*break_block);
@@ -136,6 +138,18 @@ impl<'ctx> Visitor<'ctx> for CodeGenerator<'ctx> {
             self.builder.position_at_end(end_block);
         } else {
             panic!("Break statement outside of loop");
+        }
+    }
+
+    fn visit_continue_stmt(&mut self, _stmt: &ContinueStmt) {
+        let continue_block = self.continue_block_stack.last();
+        if let Some(continue_block) = continue_block {
+            self.builder.build_unconditional_branch(*continue_block);
+            let function = self.builder.get_insert_block().unwrap().get_parent().unwrap();
+            let end_block = self.context.append_basic_block(function, "continue_end");
+            self.builder.position_at_end(end_block);
+        } else {
+            panic!("Continue statement outside of loop");
         }
     }
 

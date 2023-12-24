@@ -15,4 +15,5 @@ pub struct CodeGenerator<'ctx> {
     builder: &'ctx Builder<'ctx>,
     symbol_table: Vec<HashMap<String, VariableInfo<'ctx>>>,
     break_block_stack: Vec<BasicBlock<'ctx>>,
+    continue_block_stack: Vec<BasicBlock<'ctx>>,
 }
