@@ -53,10 +53,10 @@ impl Lexer {
     fn character(&mut self) -> Option<Token> {
         let c = self.advance();
         if self.peek_char() != '\'' {
-            return Some(Token::new_with_lexeme(TokenKind::Illegal, self.line, self.column, "Expected closing \'".to_string()));
+            return Some(Token::new(TokenKind::Illegal("Expected closing \'".to_string()), self.line, self.column));
         }
         self.advance();
-        Some(Token::new_with_lexeme(TokenKind::Char, self.line, self.column, c.to_string()))
+        Some(Token::new(TokenKind::Char(c), self.line, self.column))
     }
 
     fn number(&mut self) -> Option<Token> {
@@ -84,12 +84,12 @@ impl Lexer {
         let lexeme = self.input[self.start..self.current].to_string();
 
         let kind = if lexeme.contains('.') || lexeme.contains('e') || lexeme.contains('E') {
-            TokenKind::Float
+            TokenKind::Float(lexeme)
         } else {
-            TokenKind::Int
+            TokenKind::Int(lexeme)
         };
 
-        Some(Token::new_with_lexeme(kind, self.line, self.column, lexeme))
+        Some(Token::new(kind, self.line, self.column))
     }
 
     fn identifier(&mut self) -> Option<Token> {
@@ -112,10 +112,10 @@ impl Lexer {
             "while" => TokenKind::While,
             "break" => TokenKind::Break,
             "continue" => TokenKind::Continue,
-            _ => TokenKind::Ident,
+            _ => TokenKind::Ident(lexeme),
         };
 
-        Some(Token::new_with_lexeme(kind, self.line, self.column, lexeme))
+        Some(Token::new(kind, self.line, self.column))
     }
 }
 
@@ -132,7 +132,9 @@ impl Iterator for Lexer {
 
         self.start = self.current;
 
-        match self.advance() {
+        let current = self.advance();
+
+        match current {
             '-' => Some(Token::new(TokenKind::Minus, self.line, self.column)),
             '+' => Some(Token::new(TokenKind::Plus, self.line, self.column)),
             '*' => Some(Token::new(TokenKind::Asterisk, self.line, self.column)),
@@ -202,7 +204,7 @@ impl Iterator for Lexer {
             'a'..='z' | 'A'..='Z' | '_' => self.identifier(),
             _ => {
                 self.advance();
-                Some(Token::new(TokenKind::Illegal, self.line, self.column))
+                Some(Token::new(TokenKind::Illegal(current.to_string()), self.line, self.column))
             },
         }
     }

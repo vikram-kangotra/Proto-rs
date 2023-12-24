@@ -57,11 +57,14 @@ impl<'ctx> Parser<'ctx> {
 
     fn var_decl_statement(&mut self) -> Box<dyn Stmt<'ctx> + 'ctx> {
         self.consume(TokenKind::Let);
-        let name = self.lexer.next().unwrap().lexeme.unwrap(); // error handling
-        self.consume(TokenKind::Assign);
-        let expr = self.expression();
-        self.consume(TokenKind::Semicolon);
-        Box::new(VarDeclStmt::new(name, expr) as VarDeclStmt<'ctx>)
+        if let TokenKind::Ident(name) = self.lexer.next().unwrap().kind {
+            self.consume(TokenKind::Assign);
+            let initializer = self.expression();
+            self.consume(TokenKind::Semicolon);
+            Box::new(VarDeclStmt::new(name, initializer) as VarDeclStmt<'ctx>)
+        } else {
+            panic!("Expected identifier but got {:?}", self.lexer.peek().unwrap_or(&Token::default()).kind);
+        }
     }
 
     fn block_statement(&mut self) -> Box<dyn Stmt<'ctx> + 'ctx> {
@@ -182,40 +185,32 @@ impl<'ctx> Parser<'ctx> {
 
     fn primary(&mut self) -> Box<dyn Expr<'ctx> + 'ctx> {
 
-        match self.lexer.peek().unwrap_or(&Token::default()).kind {
-            TokenKind::Char => {
-                let token = self.lexer.next().unwrap();
-                let value = token.lexeme.unwrap().chars().next().unwrap();
+        let token = self.lexer.next().unwrap_or(Token::default());
+
+        match token.kind {
+            TokenKind::Char(value) => {
                 Box::new(LiteralExpr::new_char(self.context, value) as LiteralExpr<'ctx>)
             }
-            TokenKind::Int => {
-                let token = self.lexer.next().unwrap();
-                let value = token.lexeme.unwrap().parse::<i128>().unwrap();
+            TokenKind::Int(value) => {
+                let value = value.parse::<i128>().unwrap();
                 Box::new(LiteralExpr::new_int(self.context, value) as LiteralExpr<'ctx>)
             },
-            TokenKind::Float => {
-                let token = self.lexer.next().unwrap();
-                let value = token.lexeme.unwrap().parse::<f64>().unwrap();
+            TokenKind::Float(value) => {
+                let value = value.parse::<f64>().unwrap();
                 Box::new(LiteralExpr::new_float(self.context, value) as LiteralExpr<'ctx>)
             },
             TokenKind::False => {
-                self.lexer.next();
                 Box::new(LiteralExpr::new_bool(self.context, true) as LiteralExpr<'ctx>)
             }
             TokenKind::True => {
-                self.lexer.next();
                 Box::new(LiteralExpr::new_bool(self.context, false) as LiteralExpr<'ctx>)
             }
             TokenKind::LeftParen => {
-                self.lexer.next();
                 let expr = self.expression();
                 self.consume(TokenKind::RightParen);
                 expr
             },
-            TokenKind::Ident => {
-                let token = self.lexer.next().unwrap();
-                let name = token.lexeme.unwrap();
-
+            TokenKind::Ident(name) => {
                 if self.lexer.peek().unwrap().kind == TokenKind::Assign {
                     self.lexer.next();
                     let value = self.expression();
@@ -224,14 +219,8 @@ impl<'ctx> Parser<'ctx> {
                     Box::new(VariableExpr::new(name))
                 }
             },
-            TokenKind::Illegal => {
-                let token = self.lexer.next().unwrap();
-                panic!("Syntax Error (line: {}, column: {}): {}", token.line, token.column, token.lexeme.unwrap());
-            }
-            _ => {
-                let token = self.lexer.next().unwrap_or_default();
-                panic!("Syntax Error (line: {}, column: {}): {:?} '{}'", token.line, token.column, token.kind, token.lexeme.unwrap_or_default());
-            }
+            TokenKind::Illegal(lexeme) => panic!("Syntax Error (line: {}, column: {}): Illegal token '{}'", token.line, token.column, lexeme),
+            _ => panic!("Syntax Error (line: {}, column: {}): Unexpected token '{:?}'", token.line, token.column, token.kind),
         }
     }
 
