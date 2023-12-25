@@ -16,29 +16,20 @@ impl<'ctx> Compiler<'ctx> {
 
         Self {
             context,
-            module,
-            builder,
+            generator: CodeGenerator::new(context, module, builder),
         }
 
     }
 
-    pub fn compile(&mut self, source: &str) -> Result<(), String> {
+    pub fn compile(&mut self, source: String) -> Result<(), String> {
 
         let lexer = Lexer::new(source);
         let mut parser = Parser::new(&self.context, lexer);
 
         let stmts = parser.parse();
 
-        let fn_type = self.context.i64_type().fn_type(&[], false);
-        let function = self.module.add_function("main", fn_type, None);
-        
-        let basic_block = self.context.append_basic_block(function, "entry");
-        self.builder.position_at_end(basic_block);
-        
-        let mut generator = CodeGenerator::new(&self.context, &self.builder);
-
         for stmt in stmts {
-            generator.generate_code(stmt.as_ref());
+            self.generator.generate_code(stmt.as_ref());
         }
         
         Ok(())
@@ -47,7 +38,7 @@ impl<'ctx> Compiler<'ctx> {
     pub fn generate_output(&mut self, output_filename: &Path, filetype: FileType) -> Result<(), String> {
 
         println!("Generated LLVM IR:");
-        println!("{}", self.module.print_to_string().to_string());
+        println!("{}", self.generator.get_module().print_to_string().to_string());
 
         Target::initialize_all(&InitializationConfig::default());
 
@@ -67,7 +58,9 @@ impl<'ctx> Compiler<'ctx> {
         ).ok_or("Could not create target machine")?;
 
         target_machine
-            .write_to_file(&self.module, filetype, output_filename)
+            .write_to_file(&self.generator.get_module(),
+                           filetype, 
+                           output_filename)
             .map_err(|e| e.to_string())?;
 
         Ok(())

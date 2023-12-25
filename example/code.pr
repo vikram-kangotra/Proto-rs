@@ -20,6 +20,31 @@ return c;
 
 */
 
+fn putchar(c);
+
+fn main() {
+    let a = 10;
+    let b = 20;
+
+    putchar('H');
+    putchar('e');
+    putchar('l');
+    putchar('l');
+    putchar('o');
+    putchar(' ');
+    putchar('W');
+    putchar('o');
+    putchar('r');
+    putchar('l');
+    putchar('d');
+    putchar('!');
+    putchar('\n');
+
+    return a + b;
+}
+
+
+/*
 let a = 0;
 let b = 1;
 
@@ -37,3 +62,4 @@ while count < 10 {
 }
 
 return c;
+*/

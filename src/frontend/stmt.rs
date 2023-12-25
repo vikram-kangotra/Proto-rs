@@ -109,3 +109,35 @@ impl ContinueStmt {
         Self
     }
 }
+
+#[derive(Stmt)]
+pub struct FunctionDefStmt<'ctx> {
+    pub name: String,
+    pub params: Vec<String>,
+    pub body: Box<dyn Stmt<'ctx> + 'ctx>,
+}
+
+impl<'ctx> FunctionDefStmt<'ctx> {
+    pub fn new(name: String, params: Vec<String>, body: Box<dyn Stmt<'ctx> + 'ctx>) -> Self {
+        Self {
+            name,
+            params,
+            body,
+        }
+    }
+}
+
+#[derive(Stmt)]
+pub struct FunctionDeclStmt {
+    pub name: String,
+    pub params: Vec<String>,
+}
+
+impl FunctionDeclStmt {
+    pub fn new(name: String, params: Vec<String>) -> Self {
+        Self {
+            name,
+            params,
+        }
+    }
+}

@@ -2,20 +2,23 @@ use std::collections::HashMap;
 
 use inkwell::FloatPredicate;
 use inkwell::context::Context;
-use inkwell::values::{IntValue, FloatValue};
+use inkwell::module::Module;
+use inkwell::types::BasicMetadataTypeEnum;
+use inkwell::values::{IntValue, FloatValue, BasicMetadataValueEnum};
 use inkwell::{builder::Builder, values::BasicValueEnum};
 use crate::code_generator::CodeGenerator;
-use crate::frontend::expr::{BinaryExpr, LiteralExpr, UnaryExpr, VariableExpr, VarAssignExpr};
-use crate::frontend::stmt::{Stmt, ExprStmt, VarDeclStmt, ReturnStmt, BlockStmt, IfStmt, WhileStmt, BreakStmt, ContinueStmt};
+use crate::frontend::expr::{BinaryExpr, LiteralExpr, UnaryExpr, VariableExpr, VarAssignExpr, CallExpr};
+use crate::frontend::stmt::{Stmt, ExprStmt, VarDeclStmt, ReturnStmt, BlockStmt, IfStmt, WhileStmt, BreakStmt, ContinueStmt, FunctionDeclStmt, FunctionDefStmt};
 use crate::frontend::visitor::Visitor;
 use crate::frontend::token::TokenKind;
 
 use super::VariableInfo;
 
 impl<'ctx> CodeGenerator<'ctx> {
-    pub fn new(context: &'ctx Context,builder: &'ctx Builder<'ctx>) -> CodeGenerator<'ctx> {
+    pub fn new(context: &'ctx Context, module: Module<'ctx>, builder: Builder<'ctx>) -> CodeGenerator<'ctx> {
         CodeGenerator {
             context,
+            module,
             builder,
             symbol_table: vec![HashMap::new()],
             break_block_stack: vec![],
@@ -25,6 +28,14 @@ impl<'ctx> CodeGenerator<'ctx> {
 
     pub fn generate_code(&mut self, stmt: &dyn Stmt<'ctx>) {
         stmt.accept(self)
+    }
+
+    pub fn get_module(&self) -> &Module<'ctx> {
+        &self.module
+    }
+
+    pub fn get_builder(&self) -> &Builder<'ctx> {
+        &self.builder
     }
 
     fn enter_scope(&mut self) {
@@ -43,10 +54,10 @@ impl<'ctx> Visitor<'ctx> for CodeGenerator<'ctx> {
     }
 
     fn visit_var_decl_stmt(&mut self, stmt: &VarDeclStmt<'ctx>) {
-        let name = stmt.name.to_owned();
-        let value = stmt.expr.as_ref().accept(self);
+        let name = &stmt.name;
+        let value = stmt.expr.accept(self);
 
-        let alloca = self.builder.build_alloca(value.get_type(), &name);
+        let alloca = self.builder.build_alloca(value.get_type(), name);
         self.builder.build_store(alloca, value);
 
         let variable_info = VariableInfo {
@@ -54,12 +65,12 @@ impl<'ctx> Visitor<'ctx> for CodeGenerator<'ctx> {
             alloca,
         };
         if let Some(scope) = self.symbol_table.last_mut() {
-            scope.insert(name, variable_info);
+            scope.insert(name.to_owned(), variable_info);
         }
     }
 
     fn visit_return_stmt(&mut self, stmt: &ReturnStmt<'ctx>) {
-        let value = stmt.expr.as_ref().accept(self);
+        let value = stmt.expr.accept(self);
         self.builder.build_return(Some(&value));
     }
 
@@ -85,7 +96,7 @@ impl<'ctx> Visitor<'ctx> for CodeGenerator<'ctx> {
 
         self.builder.build_unconditional_branch(cond_block);
         self.builder.position_at_end(cond_block);
-        let condition = stmt.cond.as_ref().accept(self);
+        let condition = stmt.cond.accept(self);
         let condition = condition.into_int_value();
 
         self.builder.build_conditional_branch(condition, then_block, else_block);
@@ -112,7 +123,7 @@ impl<'ctx> Visitor<'ctx> for CodeGenerator<'ctx> {
         self.builder.build_unconditional_branch(cond_block);
 
         self.builder.position_at_end(cond_block);
-        let condition = stmt.cond.as_ref().accept(self);
+        let condition = stmt.cond.accept(self);
         let condition = condition.into_int_value();
         self.builder.build_conditional_branch(condition, body_block, end_block);
 
@@ -153,15 +164,48 @@ impl<'ctx> Visitor<'ctx> for CodeGenerator<'ctx> {
         }
     }
 
+    fn visit_function_decl_stmt(&mut self, stmt: &FunctionDeclStmt) {
+        let name = &stmt.name;
+        let params = &stmt.params;
+        let param_types = params.iter().map(|_param| self.context.i8_type().into()).collect::<Vec<BasicMetadataTypeEnum>>();
+        let function_type = self.context.void_type().fn_type(&param_types, false);
+        self.module.add_function(&name, function_type, None);
+    }
+
+    fn visit_function_def_stmt(&mut self, stmt: &FunctionDefStmt<'ctx>) {
+        let name = &stmt.name;
+        let params = &stmt.params;
+        let param_types = params.iter().map(|_param| self.context.i8_type().into()).collect::<Vec<BasicMetadataTypeEnum>>();
+        let function_type = self.context.void_type().fn_type(&param_types, false);
+        let function = self.module.add_function(&name, function_type, None);
+
+        let entry_block = self.context.append_basic_block(function, "entry");
+        self.builder.position_at_end(entry_block);
+
+        stmt.body.accept(self);
+    }
+
+    fn visit_call_expr(&mut self, expr: &CallExpr<'ctx>) -> BasicValueEnum<'ctx> {
+        let name = &expr.callee;
+        let function = self.module.get_function(name).unwrap();
+        let args = expr.args.iter().map(|arg| arg.accept(self).into()).collect::<Vec<BasicMetadataValueEnum>>();
+
+        let ret_value = self.builder
+            .build_call(function, &args, &name)
+            .try_as_basic_value().left();
+
+        ret_value.unwrap_or_else(|| self.context.i32_type().const_zero().into())
+    }
+
     fn visit_literal_expr(&mut self, expr: &LiteralExpr<'ctx>) -> BasicValueEnum<'ctx> {
         expr.value
     }
 
     fn visit_variable_expr(&mut self, expr: &VariableExpr) -> BasicValueEnum<'ctx> {
-        let name = expr.name.to_owned();
+        let name = &expr.name;
 
         for scope in self.symbol_table.iter().rev() {
-            if let Some(variable_info) = scope.get(&name) {
+            if let Some(variable_info) = scope.get(name) {
                 let alloca = variable_info.alloca;
                 return self.builder.build_load(variable_info.type_, alloca, &name);
             }
@@ -171,11 +215,11 @@ impl<'ctx> Visitor<'ctx> for CodeGenerator<'ctx> {
     }
     
     fn visit_var_assign_expr(&mut self, expr: &VarAssignExpr<'ctx>) -> BasicValueEnum<'ctx> {
-        let name = expr.name.to_owned();
-        let value = expr.value.as_ref().accept(self);
+        let name = &expr.name;
+        let value = expr.value.accept(self);
 
         for scope in self.symbol_table.iter().rev() {
-            if let Some(variable_info) = scope.get(&name) {
+            if let Some(variable_info) = scope.get(name) {
                 let alloca = variable_info.alloca;
                 self.builder.build_store(alloca, value);
                 return value;
@@ -186,7 +230,7 @@ impl<'ctx> Visitor<'ctx> for CodeGenerator<'ctx> {
     }
 
     fn visit_unary_expr(&mut self, expr: &UnaryExpr<'ctx>) -> BasicValueEnum<'ctx> {
-        let operand = expr.right.as_ref().accept(self);
+        let operand = expr.right.accept(self);
 
         match operand {
             BasicValueEnum::IntValue(value) => self.visit_unary_expr_int(value, expr),
@@ -212,15 +256,15 @@ impl<'ctx> Visitor<'ctx> for CodeGenerator<'ctx> {
     }
 
     fn visit_binary_expr(&mut self, expr: &BinaryExpr<'ctx>) -> BasicValueEnum<'ctx> {
-        let left = expr.left.as_ref().accept(self);
-        let right = expr.right.as_ref().accept(self);
+        let left = expr.left.accept(self);
+        let right = expr.right.accept(self);
 
         match (left, right) {
             (BasicValueEnum::IntValue(left), BasicValueEnum::IntValue(right)) => self.visit_binary_expr_int_int(left, right, expr),
             (BasicValueEnum::IntValue(left), BasicValueEnum::FloatValue(right)) => self.visit_binary_expr_int_float(left, right, expr),
             (BasicValueEnum::FloatValue(left), BasicValueEnum::IntValue(right)) => self.visit_binary_expr_float_int(left, right, expr),
             (BasicValueEnum::FloatValue(left), BasicValueEnum::FloatValue(right)) => self.visit_binary_expr_float_float(left, right, expr),
-            _ => panic!("Unexpected token"),
+            _ => panic!("Unexpected token: left: {:?}, right: {:?}", left, right),
         }
     }
 

@@ -7,8 +7,8 @@ use crate::frontend::token::TokenKind;
 
 use std::iter::Peekable;
 
-use super::expr::{VariableExpr, VarAssignExpr};
-use super::stmt::{Stmt, ExprStmt, VarDeclStmt, ReturnStmt, BlockStmt, IfStmt, WhileStmt, BreakStmt, ContinueStmt};
+use super::expr::{VariableExpr, VarAssignExpr, CallExpr};
+use super::stmt::{Stmt, ExprStmt, VarDeclStmt, ReturnStmt, BlockStmt, IfStmt, WhileStmt, BreakStmt, ContinueStmt, FunctionDeclStmt, FunctionDefStmt};
 
 pub struct Parser<'ctx> {
     context: &'ctx Context,
@@ -43,6 +43,7 @@ impl<'ctx> Parser<'ctx> {
             TokenKind::While => self.while_statement(),
             TokenKind::Break => self.break_statement(),
             TokenKind::Continue => self.continue_statement(),
+            TokenKind::Function => self.function_decl_def_statement(),
             _ => self.expression_statement(),
         }
     }
@@ -111,6 +112,35 @@ impl<'ctx> Parser<'ctx> {
         self.consume(TokenKind::Continue);
         self.consume(TokenKind::Semicolon);
         Box::new(ContinueStmt::new() as ContinueStmt)
+    }
+
+    fn function_decl_def_statement(&mut self) -> Box<dyn Stmt<'ctx> + 'ctx> {
+        self.consume(TokenKind::Function);
+        if let TokenKind::Ident(name) = self.lexer.next().unwrap_or_default().kind {
+            self.consume(TokenKind::LeftParen);
+            let mut params = Vec::new();
+            while self.lexer.peek().unwrap_or(&Token::default()).kind != TokenKind::RightParen {
+                if let TokenKind::Ident(name) = self.lexer.next().unwrap_or_default().kind {
+                    params.push(name);
+                } else {
+                    panic!("Expected identifier but got {:?}", self.lexer.peek().unwrap_or(&Token::default()).kind);
+                }
+                if self.lexer.peek().unwrap_or(&Token::default()).kind != TokenKind::RightParen {
+                    self.consume(TokenKind::Comma);
+                }
+            }
+            self.consume(TokenKind::RightParen);
+
+            if let TokenKind::LeftBrace = self.lexer.peek().unwrap_or(&Token::default()).kind {
+                let body = self.block_statement();
+                Box::new(FunctionDefStmt::new(name, params, body) as FunctionDefStmt<'ctx>)
+            } else {
+                self.consume(TokenKind::Semicolon);
+                Box::new(FunctionDeclStmt::new(name, params) as FunctionDeclStmt)
+            }
+        } else {
+            panic!("Expected identifier but got {:?}", self.lexer.peek().unwrap_or(&Token::default()).kind);
+        }
     }
 
     fn expression_statement(&mut self) -> Box<dyn Stmt<'ctx> + 'ctx> {
@@ -215,6 +245,17 @@ impl<'ctx> Parser<'ctx> {
                     self.lexer.next();
                     let value = self.expression();
                     Box::new(VarAssignExpr::new(name, value) as VarAssignExpr<'ctx>)
+                } else if self.lexer.peek().unwrap().kind == TokenKind::LeftParen {
+                    self.lexer.next();
+                    let mut args = Vec::new();
+                    while self.lexer.peek().unwrap().kind != TokenKind::RightParen {
+                        args.push(self.expression());
+                        if self.lexer.peek().unwrap().kind != TokenKind::RightParen {
+                            self.consume(TokenKind::Comma);
+                        }
+                    }
+                    self.consume(TokenKind::RightParen);
+                    Box::new(CallExpr::new(name, args) as CallExpr<'ctx>)
                 } else {
                     Box::new(VariableExpr::new(name))
                 }

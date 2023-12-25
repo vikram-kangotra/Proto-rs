@@ -43,7 +43,7 @@ fn main() {
     let context = Context::create(); 
     let mut compiler = Compiler::new(&context);
 
-    compiler.compile(&source).unwrap();
+    compiler.compile(source).unwrap();
 
     let output_file = matches.get_one::<String>("OUTPUT").unwrap();
     let output_file = Path::new(output_file);

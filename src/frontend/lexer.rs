@@ -130,6 +130,7 @@ impl Lexer {
             "while" => TokenKind::While,
             "break" => TokenKind::Break,
             "continue" => TokenKind::Continue,
+            "fn" => TokenKind::Function,
             _ => TokenKind::Ident(lexeme),
         };
 

@@ -121,3 +121,18 @@ impl<'ctx> VarAssignExpr<'ctx> {
         }
     }
 }
+
+#[derive(Expr)]
+pub struct CallExpr<'ctx> {
+    pub callee: String,
+    pub args: Vec<Box<dyn Expr<'ctx> + 'ctx>>,
+}
+
+impl<'ctx> CallExpr<'ctx> {
+    pub fn new(callee: String, args: Vec<Box<dyn Expr<'ctx> + 'ctx>>) -> Self {
+        Self {
+            callee,
+            args,
+        }
+    }
+}

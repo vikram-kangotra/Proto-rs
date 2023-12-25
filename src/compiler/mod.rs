@@ -1,9 +1,10 @@
 pub mod compiler;
 
-use inkwell::{builder::Builder, context::Context, module::Module};
+use inkwell::{context::Context, module::Module};
+
+use crate::code_generator::CodeGenerator;
 
 pub struct Compiler<'ctx> {
     context: &'ctx Context,
-    module: Module<'ctx>,
-    builder: Builder<'ctx>,
+    generator: CodeGenerator<'ctx>,
 }
