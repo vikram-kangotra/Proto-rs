@@ -1,10 +1,8 @@
 pub mod compiler;
 
-use inkwell::{context::Context, module::Module};
-
-use crate::code_generator::CodeGenerator;
+use crate::{code_generator::CodeGenerator, frontend::parser::Parser};
 
 pub struct Compiler<'ctx> {
-    context: &'ctx Context,
+    parser: Parser<'ctx>,
     generator: CodeGenerator<'ctx>,
 }

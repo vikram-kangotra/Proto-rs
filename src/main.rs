@@ -8,8 +8,6 @@ use std::path::Path;
 use crate::compiler::Compiler;
 use inkwell::{targets::FileType, context::Context};
 
-use std::fs::read_to_string;
-
 fn main() {
 
     let matches = Command::new(crate_name!())
@@ -35,15 +33,20 @@ fn main() {
                 .help("output assembly file")
                 .action(ArgAction::SetTrue),
         )
+        .arg(
+            Arg::new("VERBOSE")
+                .short('v')
+                .help("verbose output")
+                .action(ArgAction::SetTrue),
+        )
         .get_matches();
 
     let source_file = matches.get_one::<String>("INPUT").unwrap();
-    let source = read_to_string(source_file).unwrap();
 
     let context = Context::create(); 
-    let mut compiler = Compiler::new(&context);
+    let mut compiler = Compiler::new(&context, source_file);
 
-    compiler.compile(source).unwrap();
+    compiler.compile().unwrap();
 
     let output_file = matches.get_one::<String>("OUTPUT").unwrap();
     let output_file = Path::new(output_file);
@@ -53,6 +56,8 @@ fn main() {
     } else {
         FileType::Object
     };
+    
+    let verbose = matches.get_flag("VERBOSE");
 
-    compiler.generate_output(output_file, filetype).unwrap();
+    compiler.generate_output(output_file, filetype, verbose).unwrap();
 }

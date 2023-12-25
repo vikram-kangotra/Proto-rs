@@ -70,8 +70,6 @@ impl Lexer {
             TokenKind::Char(self.advance())
         };
 
-        println!("character: {:?}", kind);
-
         self.advance();
 
         Some(Token::new(kind, self.line, self.column))

@@ -47,12 +47,15 @@ This command will translate the Proto-rs source file (source_file.pr) into to th
 Proto-rs supports the following command-line options:
 
 ```bash
+Usage: proto-rs [OPTIONS] --output <OUTPUT> <INPUT>
+
 Arguments:
   <INPUT>  source proto file to compile
 
 Options:
   -o, --output <OUTPUT>  output file
   -S                     output assembly file
+  -v                     verbose output
   -h, --help             Print help
   -V, --version          Print version
 ```

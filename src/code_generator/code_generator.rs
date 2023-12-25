@@ -34,10 +34,6 @@ impl<'ctx> CodeGenerator<'ctx> {
         &self.module
     }
 
-    pub fn get_builder(&self) -> &Builder<'ctx> {
-        &self.builder
-    }
-
     fn enter_scope(&mut self) {
         self.symbol_table.push(HashMap::new());
     }
@@ -187,7 +183,11 @@ impl<'ctx> Visitor<'ctx> for CodeGenerator<'ctx> {
 
     fn visit_call_expr(&mut self, expr: &CallExpr<'ctx>) -> BasicValueEnum<'ctx> {
         let name = &expr.callee;
-        let function = self.module.get_function(name).unwrap();
+        let function = if self.module.get_function(name).is_some() {
+            self.module.get_function(name).unwrap()
+        } else {
+            panic!("Function '{}' not defined", name);
+        };
         let args = expr.args.iter().map(|arg| arg.accept(self).into()).collect::<Vec<BasicMetadataValueEnum>>();
 
         let ret_value = self.builder

@@ -5,28 +5,31 @@ use inkwell::{context::Context, targets::{FileType, InitializationConfig, RelocM
 use crate::frontend::{lexer::Lexer, parser::Parser};
 use crate::code_generator::CodeGenerator;
 
+use std::fs::read_to_string;
+
 use crate::Compiler;
 
 impl<'ctx> Compiler<'ctx> {
 
-    pub fn new(context: &'ctx Context) -> Self {
+    pub fn new(context: &'ctx Context, source_file: &String) -> Self {
 
-        let module = context.create_module("entry");
+        let source = read_to_string(source_file).unwrap();
+        let lexer = Lexer::new(source);
+        let parser = Parser::new(&context, lexer);
+
+        let module = context.create_module(source_file);
         let builder = context.create_builder();
 
         Self {
-            context,
+            parser,
             generator: CodeGenerator::new(context, module, builder),
         }
 
     }
 
-    pub fn compile(&mut self, source: String) -> Result<(), String> {
+    pub fn compile(&mut self) -> Result<(), String> {
 
-        let lexer = Lexer::new(source);
-        let mut parser = Parser::new(&self.context, lexer);
-
-        let stmts = parser.parse();
+        let stmts = self.parser.parse();
 
         for stmt in stmts {
             self.generator.generate_code(stmt.as_ref());
@@ -35,10 +38,12 @@ impl<'ctx> Compiler<'ctx> {
         Ok(())
     }
 
-    pub fn generate_output(&mut self, output_filename: &Path, filetype: FileType) -> Result<(), String> {
+    pub fn generate_output(&mut self, output_filename: &Path, filetype: FileType, verbose: bool) -> Result<(), String> {
 
-        println!("Generated LLVM IR:");
-        println!("{}", self.generator.get_module().print_to_string().to_string());
+        if verbose {
+            println!("Generated LLVM IR:");
+            println!("{}", self.generator.get_module().print_to_string().to_string());
+        }
 
         Target::initialize_all(&InitializationConfig::default());
 
