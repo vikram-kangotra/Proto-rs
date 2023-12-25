@@ -10,7 +10,7 @@ pub struct Lexer {
 }
 
 impl Lexer { 
-    pub fn new(input: &str) -> Lexer {
+    pub fn new(input: String) -> Lexer {
         Lexer {
             input: input.trim().to_string(),
             start: 0,
@@ -51,12 +51,30 @@ impl Lexer {
     }
     
     fn character(&mut self) -> Option<Token> {
-        let c = self.advance();
-        if self.peek_char() != '\'' {
-            return Some(Token::new(TokenKind::Illegal("Expected closing \'".to_string()), self.line, self.column));
-        }
+
+        let kind = if self.peek_char() == '\\' {
+            self.advance();
+            match self.advance() {
+                'n' => TokenKind::Char('\n'),
+                't' => TokenKind::Char('\t'),
+                'r' => TokenKind::Char('\r'),
+                '\\' => TokenKind::Char('\\'),
+                '\'' => TokenKind::Char('\''),
+                '"' => TokenKind::Char('"'),
+                _ => {
+                    println!("invalid escape sequence");
+                    return None;
+                }
+            }
+        } else {
+            TokenKind::Char(self.advance())
+        };
+
+        println!("character: {:?}", kind);
+
         self.advance();
-        Some(Token::new(TokenKind::Char(c), self.line, self.column))
+
+        Some(Token::new(kind, self.line, self.column))
     }
 
     fn number(&mut self) -> Option<Token> {
