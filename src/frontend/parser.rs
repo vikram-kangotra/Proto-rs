@@ -56,13 +56,32 @@ impl<'ctx> Parser<'ctx> {
         }
     }
 
+    fn is_type(&self, type_: &str) -> bool {
+        match type_ {
+            "i8" | "i16" | "i32" | "i64" => true,
+            _ => false,
+        }
+    }
+
     fn var_decl_statement(&mut self) -> Box<dyn Stmt<'ctx> + 'ctx> {
         self.consume(TokenKind::Let);
         if let TokenKind::Ident(name) = self.lexer.next().unwrap().kind {
+
+            let type_ = if self.lexer.peek().unwrap_or(&Token::default()).kind == TokenKind::Colon {
+                self.consume(TokenKind::Colon);
+                match self.lexer.next().map(|token| token.kind) {
+                    Some(TokenKind::Ident(type_)) if self.is_type(&type_) => Some(type_),
+                    Some(kind) => panic!("Expected type but got {:?}", kind),
+                    _ => panic!("Expected type but got {:?}", self.lexer.peek().unwrap_or(&Token::default()).kind),
+                }
+            } else {
+                None
+            };
+
             self.consume(TokenKind::Assign);
             let initializer = self.expression();
             self.consume(TokenKind::Semicolon);
-            Box::new(VarDeclStmt::new(name, initializer) as VarDeclStmt<'ctx>)
+            Box::new(VarDeclStmt::new(name, type_, initializer) as VarDeclStmt<'ctx>)
         } else {
             panic!("Expected identifier but got {:?}", self.lexer.peek().unwrap_or(&Token::default()).kind);
         }

@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use inkwell::FloatPredicate;
 use inkwell::context::Context;
 use inkwell::module::Module;
-use inkwell::types::BasicMetadataTypeEnum;
+use inkwell::types::{BasicMetadataTypeEnum, BasicTypeEnum};
 use inkwell::values::{IntValue, FloatValue, BasicMetadataValueEnum};
 use inkwell::{builder::Builder, values::BasicValueEnum};
 use crate::code_generator::CodeGenerator;
@@ -41,6 +41,19 @@ impl<'ctx> CodeGenerator<'ctx> {
     fn exit_scope(&mut self) {
         self.symbol_table.pop();
     }
+
+    fn check_type_match(&self, expected: &str, actual: BasicTypeEnum<'ctx>) {
+        let type_: BasicTypeEnum<'ctx> = match expected {
+            "i8" => self.context.i8_type().into(),
+            "i16" => self.context.i16_type().into(),
+            "i32" => self.context.i32_type().into(),
+            "i64" => self.context.i64_type().into(),
+            _ => panic!("Expected int or float, got {:?}", actual),
+        };
+        if type_ != actual {
+            panic!("Expected {:?}, got {:?}", expected, actual);
+        }
+    }
 }
 
 impl<'ctx> Visitor<'ctx> for CodeGenerator<'ctx> {
@@ -52,6 +65,10 @@ impl<'ctx> Visitor<'ctx> for CodeGenerator<'ctx> {
     fn visit_var_decl_stmt(&mut self, stmt: &VarDeclStmt<'ctx>) {
         let name = &stmt.name;
         let value = stmt.expr.accept(self);
+
+        if let Some(type_) = &stmt.type_ {
+            self.check_type_match(type_, value.get_type());
+        }
 
         let alloca = self.builder.build_alloca(value.get_type(), name);
         self.builder.build_store(alloca, value);

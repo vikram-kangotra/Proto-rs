@@ -22,13 +22,15 @@ impl<'ctx> ExprStmt<'ctx> {
 #[derive(Stmt)]
 pub struct VarDeclStmt<'ctx> {
     pub name: String,
+    pub type_: Option<String>,
     pub expr: Box<dyn Expr<'ctx> + 'ctx>,
 }
 
 impl<'ctx> VarDeclStmt<'ctx> {
-    pub fn new(name: String, expr: Box<dyn Expr<'ctx> + 'ctx>) -> Self {
+    pub fn new(name: String, type_: Option<String>, expr: Box<dyn Expr<'ctx> + 'ctx>) -> Self {
         Self {
             name,
+            type_,
             expr,
         }
     }

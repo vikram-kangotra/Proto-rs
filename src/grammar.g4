@@ -14,13 +14,15 @@ BREAK: 'break';
 CONTINUE: 'continue';
 FUNCTION: 'fn';
 
+DATA_TYPE: 'i8' | 'i16' | 'i32' | 'i64';
+
 COMMENT: '//' .* '\n' | '/*' .* '*/'
 
 stmt: initialize | exprStmt | block | if | while | function_dec | function_def;
 exprStmt: expr ';' ;
 breakStmt: BREAK ';' ;
 continueStmt: CONTINUE ';' ;
-initialize: LET IDENT '=' exprStmt;
+initialize: LET IDENT (':' DATA_TYPE)? '=' exprStmt;
 block: '{' stmt* '}';
 if: IF expr stmt (ELSE if)* (ELSE stmt)?;
 while: WHILE expr stmt;

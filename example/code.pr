@@ -23,8 +23,8 @@ return c;
 fn putchar(c);
 
 fn main() {
-    let a = 10;
-    let b = 20;
+    let a: i8 = 10;
+    let b: i8 = 20;
 
     putchar('H');
     putchar('e');

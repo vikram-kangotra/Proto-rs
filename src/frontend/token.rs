@@ -47,6 +47,7 @@ pub enum TokenKind {
 
     // Delimiters
     Comma,
+    Colon,
     Semicolon,
 
     LeftParen,
