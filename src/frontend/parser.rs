@@ -8,7 +8,7 @@ use crate::frontend::token::TokenKind;
 use std::iter::Peekable;
 
 use super::expr::{VariableExpr, VarAssignExpr, CallExpr};
-use super::stmt::{Stmt, ExprStmt, VarDeclStmt, ReturnStmt, BlockStmt, IfStmt, WhileStmt, BreakStmt, ContinueStmt, FunctionDeclStmt, FunctionDefStmt};
+use super::stmt::{Stmt, ExprStmt, VarDeclStmt, ReturnStmt, BlockStmt, IfStmt, WhileStmt, BreakStmt, ContinueStmt, FunctionDeclStmt, FunctionDefStmt, Param};
 
 pub struct Parser<'ctx> {
     context: &'ctx Context,
@@ -139,11 +139,18 @@ impl<'ctx> Parser<'ctx> {
             self.consume(TokenKind::LeftParen);
             let mut params = Vec::new();
             while self.lexer.peek().unwrap_or(&Token::default()).kind != TokenKind::RightParen {
-                if let TokenKind::Ident(name) = self.lexer.next().unwrap_or_default().kind {
-                    params.push(name);
-                } else {
-                    panic!("Expected identifier but got {:?}", self.lexer.peek().unwrap_or(&Token::default()).kind);
-                }
+                let name = match self.lexer.next().map(|token| token.kind) {
+                    Some(TokenKind::Ident(name)) => name,
+                    _ => panic!("Expected identifier but got {:?}", self.lexer.peek().unwrap_or(&Token::default()).kind),
+                };
+                self.consume(TokenKind::Colon);
+                let type_ = match self.lexer.next().map(|token| token.kind) {
+                    Some(TokenKind::Ident(type_)) if self.is_type(&type_) => type_,
+                    Some(kind) => panic!("Expected type but got {:?}", kind),
+                    _ => panic!("Expected type but got {:?}", self.lexer.peek().unwrap_or(&Token::default()).kind),
+                };
+                params.push(Param::new(name, type_));
+
                 if self.lexer.peek().unwrap_or(&Token::default()).kind != TokenKind::RightParen {
                     self.consume(TokenKind::Comma);
                 }

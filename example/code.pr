@@ -20,7 +20,7 @@ return c;
 
 */
 
-fn putchar(c);
+fn putchar(c: i8);
 
 fn main() {
     let a: i8 = 10;

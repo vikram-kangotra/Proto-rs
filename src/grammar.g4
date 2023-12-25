@@ -26,8 +26,8 @@ initialize: LET IDENT (':' DATA_TYPE)? '=' exprStmt;
 block: '{' stmt* '}';
 if: IF expr stmt (ELSE if)* (ELSE stmt)?;
 while: WHILE expr stmt;
-function_dec: FUNCTION IDENT '(' IDENT* ')' ';' ;
-function_def: FUNCTION IDENT '(' IDENT* ')' block;
+function_dec: FUNCTION IDENT '(' (IDENT ':' DATA_TYPE)* ')' ';' ;
+function_def: FUNCTION IDENT '(' (IDENT ':' DATA_TYPE)* ')' block;
 
 expr: equality | function_call;
 assignment: IDENT ('=' expr)?;

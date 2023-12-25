@@ -42,14 +42,20 @@ impl<'ctx> CodeGenerator<'ctx> {
         self.symbol_table.pop();
     }
 
-    fn check_type_match(&self, expected: &str, actual: BasicTypeEnum<'ctx>) {
-        let type_: BasicTypeEnum<'ctx> = match expected {
+    fn get_type(&self, type_: &str) -> BasicTypeEnum<'ctx> {
+        match type_ {
             "i8" => self.context.i8_type().into(),
             "i16" => self.context.i16_type().into(),
             "i32" => self.context.i32_type().into(),
             "i64" => self.context.i64_type().into(),
-            _ => panic!("Expected int or float, got {:?}", actual),
-        };
+            "f32" => self.context.f32_type().into(),
+            "f64" => self.context.f64_type().into(),
+            _ => panic!("Unknown type {}", type_),
+        }
+    }
+
+    fn check_type_match(&self, expected: &str, actual: BasicTypeEnum<'ctx>) {
+        let type_ = self.get_type(expected);
         if type_ != actual {
             panic!("Expected {:?}, got {:?}", expected, actual);
         }
@@ -180,7 +186,7 @@ impl<'ctx> Visitor<'ctx> for CodeGenerator<'ctx> {
     fn visit_function_decl_stmt(&mut self, stmt: &FunctionDeclStmt) {
         let name = &stmt.name;
         let params = &stmt.params;
-        let param_types = params.iter().map(|_param| self.context.i8_type().into()).collect::<Vec<BasicMetadataTypeEnum>>();
+        let param_types = params.iter().map(|param| self.get_type(&param.type_).into()).collect::<Vec<BasicMetadataTypeEnum>>();
         let function_type = self.context.void_type().fn_type(&param_types, false);
         self.module.add_function(&name, function_type, None);
     }
@@ -188,7 +194,7 @@ impl<'ctx> Visitor<'ctx> for CodeGenerator<'ctx> {
     fn visit_function_def_stmt(&mut self, stmt: &FunctionDefStmt<'ctx>) {
         let name = &stmt.name;
         let params = &stmt.params;
-        let param_types = params.iter().map(|_param| self.context.i8_type().into()).collect::<Vec<BasicMetadataTypeEnum>>();
+        let param_types = params.iter().map(|param| self.get_type(&param.type_).into()).collect::<Vec<BasicMetadataTypeEnum>>();
         let function_type = self.context.void_type().fn_type(&param_types, false);
         let function = self.module.add_function(&name, function_type, None);
 
