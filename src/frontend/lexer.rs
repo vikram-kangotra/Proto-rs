@@ -75,6 +75,22 @@ impl Lexer {
         Some(Token::new(kind, self.line, self.column))
     }
 
+    fn string(&mut self) -> Option<Token> {
+        let mut string = String::new();
+
+        while self.peek_char() != '"' {
+            if self.current == self.input.len() {
+                println!("unterminated string");
+                return None;
+            }
+            string.push(self.advance());
+        }
+
+        self.advance();
+
+        Some(Token::new(TokenKind::String(string), self.line, self.column))
+    }
+
     fn number(&mut self) -> Option<Token> {
         while self.peek_char().is_digit(10) {
             self.advance();
@@ -225,6 +241,7 @@ impl Iterator for Lexer {
                 }
             },
             '\'' => self.character(),
+            '\"' => self.string(),
             '0'..='9' => self.number(),
             'a'..='z' | 'A'..='Z' | '_' => self.identifier(),
             _ => {

@@ -1,11 +1,13 @@
 DIGIT: [0-9];
+CHAR: [a-zA-Z_]
 INT: DIGIT+;
 FLOAT: DIGIT+ '.' DIGIT+ EXPONENT?;
 EXPONENT: [eE][+-]? DIGIT+;
+STRING: '"' (CHAR | DIGIT)* '"';
 
 TRUE: 'true';
 FALSE: 'false';
-IDENT: [a-zA-Z_]+ [a-zA-Z_0-9]*;
+IDENT: CHAR+ [a-zA-Z_0-9]*;
 LET: 'let';
 IF: 'if';
 ELSE: 'else';

@@ -27,6 +27,7 @@ pub enum TokenKind {
     Char(char),
     Int(String),
     Float(String),
+    String(String),
 
     // Operators
     Assign,
