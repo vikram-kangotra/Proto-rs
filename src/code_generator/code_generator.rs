@@ -12,7 +12,7 @@ use crate::frontend::stmt::{Stmt, ExprStmt, VarDeclStmt, ReturnStmt, BlockStmt, 
 use crate::frontend::visitor::Visitor;
 use crate::frontend::token::TokenKind;
 
-use super::VariableInfo;
+use super::{VariableInfo, FunctionInfo};
 
 impl<'ctx> CodeGenerator<'ctx> {
     pub fn new(context: &'ctx Context, module: Module<'ctx>, builder: Builder<'ctx>) -> CodeGenerator<'ctx> {
@@ -21,6 +21,7 @@ impl<'ctx> CodeGenerator<'ctx> {
             module,
             builder,
             symbol_table: vec![HashMap::new()],
+            function_table: HashMap::new(),
             break_block_stack: vec![],
             continue_block_stack: vec![],
         }
@@ -57,7 +58,7 @@ impl<'ctx> CodeGenerator<'ctx> {
     fn check_type_match(&self, expected: &str, actual: BasicTypeEnum<'ctx>) {
         let type_ = self.get_type(expected);
         if type_ != actual {
-            panic!("Expected {:?}, got {:?}", expected, actual);
+            panic!("Expected {:?}, got {}", expected, actual);
         }
     }
 }
@@ -90,6 +91,12 @@ impl<'ctx> Visitor<'ctx> for CodeGenerator<'ctx> {
 
     fn visit_return_stmt(&mut self, stmt: &ReturnStmt<'ctx>) {
         let value = stmt.expr.accept(self);
+
+        let function = self.builder.get_insert_block().unwrap().get_parent().unwrap();
+        let return_type = self.function_table.get(&function).unwrap().func_decl.return_type.as_ref().unwrap();
+
+        self.check_type_match(&return_type, value.get_type());
+
         self.builder.build_return(Some(&value));
     }
 
@@ -187,16 +194,40 @@ impl<'ctx> Visitor<'ctx> for CodeGenerator<'ctx> {
         let name = &stmt.name;
         let params = &stmt.params;
         let param_types = params.iter().map(|param| self.get_type(&param.type_).into()).collect::<Vec<BasicMetadataTypeEnum>>();
-        let function_type = self.context.void_type().fn_type(&param_types, false);
-        self.module.add_function(&name, function_type, None);
+
+        let function_type = if let Some(return_type) = &stmt.return_type {
+            match return_type.as_str() {
+                "()"=> self.context.void_type().fn_type(&param_types, false),
+                "i8" => self.context.i8_type().fn_type(&param_types, false), 
+                "i16" => self.context.i16_type().fn_type(&param_types, false),
+                "i32" => self.context.i32_type().fn_type(&param_types, false),
+                "i64" => self.context.i64_type().fn_type(&param_types, false),
+                _ => panic!("Unsupported return type"),
+            }
+        } else {
+            self.context.void_type().fn_type(&param_types, false)
+        };
+
+        self.module.add_function(name, function_type, None);
     }
 
     fn visit_function_def_stmt(&mut self, stmt: &FunctionDefStmt<'ctx>) {
-        let name = &stmt.name;
-        let params = &stmt.params;
-        let param_types = params.iter().map(|param| self.get_type(&param.type_).into()).collect::<Vec<BasicMetadataTypeEnum>>();
-        let function_type = self.context.void_type().fn_type(&param_types, false);
-        let function = self.module.add_function(&name, function_type, None);
+        stmt.func_decl.accept(self);
+
+        let function = self.module.get_function(&stmt.func_decl.name).unwrap();
+
+        let mut params = HashMap::new();
+        for (i, param) in function.get_param_iter().enumerate() {
+            param.set_name(&stmt.func_decl.params[i].name);
+            params.insert(stmt.func_decl.params[i].name.clone(), param);
+        }
+
+        let function_info = FunctionInfo {
+            func_decl: stmt.func_decl.clone(),
+            params
+        };
+
+        self.function_table.insert(function, function_info);
 
         let entry_block = self.context.append_basic_block(function, "entry");
         self.builder.position_at_end(entry_block);
@@ -206,11 +237,16 @@ impl<'ctx> Visitor<'ctx> for CodeGenerator<'ctx> {
 
     fn visit_call_expr(&mut self, expr: &CallExpr<'ctx>) -> BasicValueEnum<'ctx> {
         let name = &expr.callee;
-        let function = if self.module.get_function(name).is_some() {
-            self.module.get_function(name).unwrap()
-        } else {
-            panic!("Function '{}' not defined", name);
+
+        let function = match self.module.get_function(name) {
+            Some(function) => function,
+            None => panic!("Function '{}' not defined", name),
         };
+
+        if expr.args.len() != function.count_params() as usize {
+            panic!("Function '{}' takes {} arguments, but {} were supplied", name, function.count_params(), expr.args.len());
+        }
+
         let args = expr.args.iter().map(|arg| arg.accept(self).into()).collect::<Vec<BasicMetadataValueEnum>>();
 
         let ret_value = self.builder
@@ -232,6 +268,11 @@ impl<'ctx> Visitor<'ctx> for CodeGenerator<'ctx> {
                 let alloca = variable_info.alloca;
                 return self.builder.build_load(variable_info.type_, alloca, &name);
             }
+        }
+
+        let function = self.builder.get_insert_block().unwrap().get_parent().unwrap();
+        if let Some(param) = self.function_table.get(&function).unwrap().params.get(name) {
+            return param.clone();
         }
 
         panic!("Variable '{}' not found in current scope", name);

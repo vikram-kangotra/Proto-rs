@@ -157,12 +157,30 @@ impl<'ctx> Parser<'ctx> {
             }
             self.consume(TokenKind::RightParen);
 
+            let return_type = if self.lexer.peek().unwrap_or(&Token::default()).kind == TokenKind::RightArrow {
+                self.lexer.next();
+
+                match self.lexer.next().map(|token| token.kind) {
+                    Some(TokenKind::LeftParen) => {
+                        self.consume(TokenKind::RightParen);
+                        None
+                    }
+                    Some(TokenKind::Ident(type_)) if self.is_type(&type_) => Some(type_),
+                    Some(kind) => panic!("Expected type but got {:?}", kind),
+                    _ => panic!("Expected type but got {:?}", self.lexer.peek().unwrap_or(&Token::default()).kind),
+                }
+            } else {
+                None
+            };
+
+            let func_decl = FunctionDeclStmt::new(name, params, return_type);
+
             if let TokenKind::LeftBrace = self.lexer.peek().unwrap_or(&Token::default()).kind {
                 let body = self.block_statement();
-                Box::new(FunctionDefStmt::new(name, params, body) as FunctionDefStmt<'ctx>)
+                Box::new(FunctionDefStmt::new(func_decl, body) as FunctionDefStmt<'ctx>)
             } else {
                 self.consume(TokenKind::Semicolon);
-                Box::new(FunctionDeclStmt::new(name, params) as FunctionDeclStmt)
+                Box::new(func_decl)
             }
         } else {
             panic!("Expected identifier but got {:?}", self.lexer.peek().unwrap_or(&Token::default()).kind);

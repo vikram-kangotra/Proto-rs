@@ -112,6 +112,7 @@ impl ContinueStmt {
     }
 }
 
+#[derive(Clone, Eq, PartialEq)]
 pub struct Param {
     pub name: String,
     pub type_: String,
@@ -126,35 +127,35 @@ impl Param {
     }
 }
 
-
-#[derive(Stmt)]
-pub struct FunctionDefStmt<'ctx> {
+#[derive(Stmt, Eq, PartialEq, Clone)]
+pub struct FunctionDeclStmt {
     pub name: String,
     pub params: Vec<Param>,
-    pub body: Box<dyn Stmt<'ctx> + 'ctx>,
+    pub return_type: Option<String>,
 }
 
-impl<'ctx> FunctionDefStmt<'ctx> {
-    pub fn new(name: String, params: Vec<Param>, body: Box<dyn Stmt<'ctx> + 'ctx>) -> Self {
+impl FunctionDeclStmt {
+    pub fn new(name: String, params: Vec<Param>, return_type: Option<String>) -> Self {
         Self {
             name,
             params,
-            body,
+            return_type,
         }
     }
 }
 
+
 #[derive(Stmt)]
-pub struct FunctionDeclStmt {
-    pub name: String,
-    pub params: Vec<Param>,
+pub struct FunctionDefStmt<'ctx> {
+    pub func_decl: FunctionDeclStmt,
+    pub body: Box<dyn Stmt<'ctx> + 'ctx>,
 }
 
-impl FunctionDeclStmt {
-    pub fn new(name: String, params: Vec<Param>) -> Self {
+impl<'ctx> FunctionDefStmt<'ctx> {
+    pub fn new(func_decl: FunctionDeclStmt, body: Box<dyn Stmt<'ctx> + 'ctx>) -> Self {
         Self {
-            name,
-            params,
+            func_decl,
+            body,
         }
     }
 }

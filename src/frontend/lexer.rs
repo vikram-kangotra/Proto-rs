@@ -152,7 +152,14 @@ impl Iterator for Lexer {
         let current = self.advance();
 
         match current {
-            '-' => Some(Token::new(TokenKind::Minus, self.line, self.column)),
+            '-' => {
+                if self.peek_char() == '>' {
+                    self.advance();
+                    Some(Token::new(TokenKind::RightArrow, self.line, self.column))
+                } else {
+                    Some(Token::new(TokenKind::Minus, self.line, self.column))
+                }
+            }
             '+' => Some(Token::new(TokenKind::Plus, self.line, self.column)),
             '*' => Some(Token::new(TokenKind::Asterisk, self.line, self.column)),
             '/' => {

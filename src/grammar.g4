@@ -15,6 +15,7 @@ CONTINUE: 'continue';
 FUNCTION: 'fn';
 
 DATA_TYPE: 'i8' | 'i16' | 'i32' | 'i64';
+RETURN_TYPE: DATA_TYPE | '()';
 
 COMMENT: '//' .* '\n' | '/*' .* '*/'
 
@@ -26,8 +27,8 @@ initialize: LET IDENT (':' DATA_TYPE)? '=' exprStmt;
 block: '{' stmt* '}';
 if: IF expr stmt (ELSE if)* (ELSE stmt)?;
 while: WHILE expr stmt;
-function_dec: FUNCTION IDENT '(' (IDENT ':' DATA_TYPE)* ')' ';' ;
-function_def: FUNCTION IDENT '(' (IDENT ':' DATA_TYPE)* ')' block;
+function_dec: FUNCTION IDENT '(' (IDENT ':' DATA_TYPE)* ')' ( '->' RETURN_TYPE )? ';' ;
+function_def: FUNCTION IDENT '(' (IDENT ':' DATA_TYPE)* ')' ( '->' RETURN_TYPE )? block;
 
 expr: equality | function_call;
 assignment: IDENT ('=' expr)?;
