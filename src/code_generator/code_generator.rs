@@ -7,7 +7,7 @@ use inkwell::types::{BasicMetadataTypeEnum, BasicTypeEnum};
 use inkwell::values::{IntValue, FloatValue, BasicMetadataValueEnum};
 use inkwell::{builder::Builder, values::BasicValueEnum};
 use crate::code_generator::CodeGenerator;
-use crate::frontend::expr::{BinaryExpr, LiteralExpr, UnaryExpr, VariableExpr, VarAssignExpr, CallExpr};
+use crate::frontend::expr::{BinaryExpr, LiteralExpr, UnaryExpr, VariableExpr, VarAssignExpr, CallExpr, IntType, LiteralType, FloatType};
 use crate::frontend::stmt::{Stmt, ExprStmt, VarDeclStmt, ReturnStmt, BlockStmt, IfStmt, WhileStmt, BreakStmt, ContinueStmt, FunctionDeclStmt, FunctionDefStmt};
 use crate::frontend::visitor::Visitor;
 use crate::frontend::token::TokenKind;
@@ -256,8 +256,25 @@ impl<'ctx> Visitor<'ctx> for CodeGenerator<'ctx> {
         ret_value.unwrap_or_else(|| self.context.i32_type().const_zero().into())
     }
 
-    fn visit_literal_expr(&mut self, expr: &LiteralExpr<'ctx>) -> BasicValueEnum<'ctx> {
-        expr.value
+    fn visit_literal_expr(&mut self, expr: &LiteralExpr) -> BasicValueEnum<'ctx> {
+        match expr.value {
+            LiteralType::Int(value) => {
+                match value {
+                    IntType::U8(value) => self.context.i8_type().const_int(value as u64, false).into(),
+                    IntType::U16(value) => self.context.i16_type().const_int(value as u64, false).into(),
+                    IntType::U32(value) => self.context.i32_type().const_int(value as u64, false).into(),
+                    IntType::U64(value) => self.context.i64_type().const_int(value, false).into(),
+                }
+            }
+            LiteralType::Float(value) => {
+                match value {
+                    FloatType::F32(value) => self.context.f32_type().const_float(value as f64).into(),
+                    FloatType::F64(value) => self.context.f64_type().const_float(value).into(),
+                }
+            }
+            LiteralType::Bool(value) => self.context.bool_type().const_int(value as u64, false).into(),
+            LiteralType::Char(value) => self.context.i8_type().const_int(value as u64, false).into(),
+        }
     }
 
     fn visit_variable_expr(&mut self, expr: &VariableExpr) -> BasicValueEnum<'ctx> {

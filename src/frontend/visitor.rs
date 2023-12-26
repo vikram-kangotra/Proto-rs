@@ -4,7 +4,7 @@ use crate::frontend::expr::{BinaryExpr, LiteralExpr, UnaryExpr};
 use super::{stmt::{ExprStmt, VarDeclStmt, ReturnStmt, BlockStmt, IfStmt, WhileStmt, BreakStmt, ContinueStmt, FunctionDeclStmt, FunctionDefStmt}, expr::{VariableExpr, VarAssignExpr, CallExpr}};
 
 pub trait Visitor<'ctx> {
-    fn visit_literal_expr(&mut self, expr: &LiteralExpr<'ctx>) -> BasicValueEnum<'ctx>;
+    fn visit_literal_expr(&mut self, expr: &LiteralExpr) -> BasicValueEnum<'ctx>;
     fn visit_variable_expr(&mut self, expr: &VariableExpr) -> BasicValueEnum<'ctx>;
     fn visit_var_assign_expr(&mut self, expr: &VarAssignExpr<'ctx>) -> BasicValueEnum<'ctx>;
 

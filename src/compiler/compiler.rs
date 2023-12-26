@@ -15,7 +15,7 @@ impl<'ctx> Compiler<'ctx> {
 
         let source = read_to_string(source_file).unwrap();
         let lexer = Lexer::new(source);
-        let parser = Parser::new(&context, lexer);
+        let parser = Parser::new(lexer);
 
         let module = context.create_module(source_file);
         let builder = context.create_builder();

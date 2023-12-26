@@ -1,5 +1,3 @@
-use inkwell::context::Context;
-
 use crate::frontend::expr::{BinaryExpr, Expr, LiteralExpr, UnaryExpr};
 use crate::frontend::lexer::Lexer;
 use crate::frontend::token::Token;
@@ -7,19 +5,17 @@ use crate::frontend::token::TokenKind;
 
 use std::iter::Peekable;
 
-use super::expr::{VariableExpr, VarAssignExpr, CallExpr};
+use super::expr::{VariableExpr, VarAssignExpr, CallExpr, LiteralType, IntType, FloatType};
 use super::stmt::{Stmt, ExprStmt, VarDeclStmt, ReturnStmt, BlockStmt, IfStmt, WhileStmt, BreakStmt, ContinueStmt, FunctionDeclStmt, FunctionDefStmt, Param};
 
-pub struct Parser<'ctx> {
-    context: &'ctx Context,
+pub struct Parser {
     lexer: Peekable<Lexer>,
 }
 
-impl<'ctx> Parser<'ctx> {
+impl<'ctx> Parser {
 
-    pub fn new(context: &'ctx Context , lexer: Lexer) -> Self {
+    pub fn new(lexer: Lexer) -> Self {
         Self {
-            context,
             lexer: lexer.peekable(),
         }
     }
@@ -263,21 +259,31 @@ impl<'ctx> Parser<'ctx> {
 
         match token.kind {
             TokenKind::Char(value) => {
-                Box::new(LiteralExpr::new_char(self.context, value) as LiteralExpr<'ctx>)
+                Box::new(LiteralExpr::new(LiteralType::Char(value)))
             }
             TokenKind::Int(value) => {
-                let value = value.parse::<i128>().unwrap();
-                Box::new(LiteralExpr::new_int(self.context, value) as LiteralExpr<'ctx>)
+                let value = value.parse::<u64>().unwrap();
+                match value {
+                    value if value <= u8::MAX as u64 => Box::new(LiteralExpr::new(LiteralType::Int(IntType::U8(value as u8)))),
+                    value if value <= u16::MAX as u64 => Box::new(LiteralExpr::new(LiteralType::Int(IntType::U16(value as u16)))),
+                    value if value <= u32::MAX as u64 => Box::new(LiteralExpr::new(LiteralType::Int(IntType::U32(value as u32)))),
+                    value if value <= u64::MAX as u64 => Box::new(LiteralExpr::new(LiteralType::Int(IntType::U64(value as u64)))),
+                    _ => panic!("Integer literal out of range"),
+                }
             },
             TokenKind::Float(value) => {
                 let value = value.parse::<f64>().unwrap();
-                Box::new(LiteralExpr::new_float(self.context, value) as LiteralExpr<'ctx>)
+                match value {
+                    value if value <= f32::MAX as f64 => Box::new(LiteralExpr::new(LiteralType::Float(FloatType::F32(value as f32)))), 
+                    value if value <= f64::MAX as f64 => Box::new(LiteralExpr::new(LiteralType::Float(FloatType::F64(value as f64)))),
+                    _ => panic!("Float literal out of range"),
+                }
             },
             TokenKind::False => {
-                Box::new(LiteralExpr::new_bool(self.context, true) as LiteralExpr<'ctx>)
+                Box::new(LiteralExpr::new(LiteralType::Bool(false)))
             }
             TokenKind::True => {
-                Box::new(LiteralExpr::new_bool(self.context, false) as LiteralExpr<'ctx>)
+                Box::new(LiteralExpr::new(LiteralType::Bool(true)))
             }
             TokenKind::LeftParen => {
                 let expr = self.expression();
