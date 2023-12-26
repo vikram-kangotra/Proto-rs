@@ -93,7 +93,7 @@ impl<'ctx> Visitor<'ctx> for CodeGenerator<'ctx> {
         let value = stmt.expr.accept(self);
 
         let function = self.builder.get_insert_block().unwrap().get_parent().unwrap();
-        let return_type = self.function_table.get(&function).unwrap().func_decl.return_type.as_ref().unwrap();
+        let return_type = self.function_table.get(&function).unwrap().return_type.as_ref().unwrap();
 
         self.check_type_match(&return_type, value.get_type());
 
@@ -223,8 +223,8 @@ impl<'ctx> Visitor<'ctx> for CodeGenerator<'ctx> {
         }
 
         let function_info = FunctionInfo {
-            func_decl: stmt.func_decl.clone(),
-            params
+            params,
+            return_type: stmt.func_decl.return_type.clone(),
         };
 
         self.function_table.insert(function, function_info);

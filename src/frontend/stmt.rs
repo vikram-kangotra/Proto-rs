@@ -127,7 +127,7 @@ impl Param {
     }
 }
 
-#[derive(Stmt, Eq, PartialEq, Clone)]
+#[derive(Stmt)]
 pub struct FunctionDeclStmt {
     pub name: String,
     pub params: Vec<Param>,

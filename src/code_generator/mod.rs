@@ -4,8 +4,6 @@ use std::collections::HashMap;
 
 use inkwell::{builder::Builder, context::Context, values::{PointerValue, BasicValueEnum, FunctionValue}, types::BasicTypeEnum, basic_block::BasicBlock, module::Module};
 
-use crate::frontend::stmt::FunctionDeclStmt;
-
 #[derive(Eq, PartialEq)]
 pub struct VariableInfo<'ctx> {
     type_: BasicTypeEnum<'ctx>,
@@ -14,8 +12,8 @@ pub struct VariableInfo<'ctx> {
 
 #[derive(Eq, PartialEq)]
 pub struct FunctionInfo<'ctx> {
-    func_decl: FunctionDeclStmt,
     params: HashMap<String, BasicValueEnum<'ctx>>,
+    return_type: Option<String>,
 }
 
 pub struct CodeGenerator<'ctx> {
