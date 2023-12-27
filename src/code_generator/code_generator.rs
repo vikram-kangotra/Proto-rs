@@ -98,6 +98,9 @@ impl<'ctx> Visitor<'ctx> for CodeGenerator<'ctx> {
         self.check_type_match(&return_type, value.get_type());
 
         self.builder.build_return(Some(&value));
+
+        let end_block = self.context.append_basic_block(function, "end");
+        self.builder.position_at_end(end_block);
     }
 
     fn visit_block_stmt(&mut self, stmt: &BlockStmt<'ctx>) {

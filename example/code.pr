@@ -44,6 +44,14 @@ fn main() -> i8 {
     putchar('!');
     putchar('\n');
 
+    if a > b {
+        return 2 * a + b;
+    } else if a == b {
+        return 2 * a;
+    } else {
+        return a + 2 * b;
+    }
+
     return a + b;
 }
 
