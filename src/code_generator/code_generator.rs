@@ -211,6 +211,10 @@ impl<'ctx> Visitor<'ctx> for CodeGenerator<'ctx> {
             self.context.void_type().fn_type(&param_types, false)
         };
 
+        if self.module.get_function(name).is_some() {
+            panic!("Function `{}` already exists", name);
+        }
+
         self.module.add_function(name, function_type, None);
     }
 

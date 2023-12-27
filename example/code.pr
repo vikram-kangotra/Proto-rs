@@ -22,13 +22,17 @@ return c;
 
 fn putchar(c: i8);
 
-fn area(a: i8, b: i8, c: i8, d: i8, e: i8, f: i8, g: i8, h: i8, i: i8) -> i8 {
-    return a + b + c + d + e + f + g + h + i;
+fn area(a: i8) -> i8 {
+    return a;
+}
+
+fn area(a: i8, b: i8) -> i8 {
+    return a + b;
 }
 
 fn main() -> i8 {
     let a: i8 = 10;
-    let b: i8 = area(1, 2, 3, 4, 5, 6, 7, 8, 9);
+    let b: i8 = area(1, 2);
 
     putchar('H');
     putchar('e');
@@ -43,14 +47,6 @@ fn main() -> i8 {
     putchar('d');
     putchar('!');
     putchar('\n');
-
-    if a > b {
-        return 2 * a + b;
-    } else if a == b {
-        return 2 * a;
-    } else {
-        return a + 2 * b;
-    }
 
     return a + b;
 }
