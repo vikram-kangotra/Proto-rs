@@ -43,6 +43,8 @@ fn main() {
     putchar('d');
     putchar('!');
     putchar('\n');
+
+    return a + b;
 }
 
 /*

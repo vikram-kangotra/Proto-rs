@@ -63,7 +63,7 @@ impl<'ctx> CodeGenerator<'ctx> {
         }
     }
  
-    fn check_type_match(&self, expected: &str, actual: BasicTypeEnum<'ctx>) {
+    fn check_type_match(&self, expected: &str, actual: &str) {
         let expected = self.extract_string(expected);
         let actual = self.extract_string(&actual.to_string());
         if expected != actual {
@@ -83,7 +83,7 @@ impl<'ctx> Visitor<'ctx> for CodeGenerator<'ctx> {
         let value = stmt.expr.accept(self);
 
         if let Some(type_) = &stmt.type_ {
-            self.check_type_match(type_, value.get_type());
+            self.check_type_match(type_, &value.get_type().to_string());
         }
 
         let alloca = self.builder.build_alloca(value.get_type(), name);
@@ -105,7 +105,7 @@ impl<'ctx> Visitor<'ctx> for CodeGenerator<'ctx> {
         let return_type = self.function_table.get(&function).unwrap().return_type.as_ref();
 
         if let Some(return_type) = return_type {
-            self.check_type_match(&return_type.to_string(), value.get_type());
+            self.check_type_match(&return_type.to_string(), &value.get_type().to_string());
         } else {
             self.function_table.get_mut(&function).unwrap().return_type = Some(value.get_type());
         }
@@ -214,11 +214,7 @@ impl<'ctx> Visitor<'ctx> for CodeGenerator<'ctx> {
         let function_type = if let Some(return_type) = &stmt.return_type {
             match return_type.as_str() {
                 "()"=> self.context.void_type().fn_type(&param_types, false),
-                "i8" => self.context.i8_type().fn_type(&param_types, false), 
-                "i16" => self.context.i16_type().fn_type(&param_types, false),
-                "i32" => self.context.i32_type().fn_type(&param_types, false),
-                "i64" => self.context.i64_type().fn_type(&param_types, false),
-                _ => panic!("Unsupported return type"),
+                _ => self.get_type(return_type).into_int_type().fn_type(&param_types, false),
             }
         } else {
             self.context.void_type().fn_type(&param_types, false)
