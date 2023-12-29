@@ -243,7 +243,11 @@ impl<'ctx> Visitor<'ctx> for CodeGenerator<'ctx> {
             return_type: if let Some(return_type) = &stmt.func_decl.return_type {
                 Some(self.get_type(return_type))
             } else {
-                None
+                if stmt.func_decl.name == "main" {
+                    Some(self.context.i32_type().into())
+                } else {
+                    None
+                }
             },
         };
 
