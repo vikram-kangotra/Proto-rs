@@ -22,17 +22,13 @@ return c;
 
 fn putchar(c: i8);
 
-fn area(a: i8) -> i8 {
-    return a;
-}
-
 fn area(a: i8, b: i8) -> i8 {
-    return a + b;
+    return a * b;
 }
 
-fn main() -> i8 {
+fn main() {
     let a: i8 = 10;
-    let b: i8 = area(1, 2);
+    let b: i8 = area(3, 2);
 
     putchar('H');
     putchar('e');
@@ -47,10 +43,7 @@ fn main() -> i8 {
     putchar('d');
     putchar('!');
     putchar('\n');
-
-    return a + b;
 }
-
 
 /*
 let a = 0;

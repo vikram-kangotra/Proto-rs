@@ -13,7 +13,7 @@ pub struct VariableInfo<'ctx> {
 #[derive(Eq, PartialEq)]
 pub struct FunctionInfo<'ctx> {
     params: HashMap<String, BasicValueEnum<'ctx>>,
-    return_type: Option<String>,
+    return_type: Option<BasicTypeEnum<'ctx>>,
 }
 
 pub struct CodeGenerator<'ctx> {

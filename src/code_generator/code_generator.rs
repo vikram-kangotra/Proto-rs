@@ -55,10 +55,19 @@ impl<'ctx> CodeGenerator<'ctx> {
         }
     }
 
+    fn extract_string(&self, string: &str) -> String { 
+        if string.starts_with("\"") && string.ends_with("\"") {
+            string[1..string.len() - 1].to_owned()
+        } else {
+            string.to_owned()
+        }
+    }
+ 
     fn check_type_match(&self, expected: &str, actual: BasicTypeEnum<'ctx>) {
-        let type_ = self.get_type(expected);
-        if type_ != actual {
-            panic!("Expected {:?}, got {}", expected, actual);
+        let expected = self.extract_string(expected);
+        let actual = self.extract_string(&actual.to_string());
+        if expected != actual {
+            panic!("Expected {}, got {}", expected, actual);
         }
     }
 }
@@ -91,11 +100,15 @@ impl<'ctx> Visitor<'ctx> for CodeGenerator<'ctx> {
 
     fn visit_return_stmt(&mut self, stmt: &ReturnStmt<'ctx>) {
         let value = stmt.expr.accept(self);
-
+       
         let function = self.builder.get_insert_block().unwrap().get_parent().unwrap();
-        let return_type = self.function_table.get(&function).unwrap().return_type.as_ref().unwrap();
+        let return_type = self.function_table.get(&function).unwrap().return_type.as_ref();
 
-        self.check_type_match(&return_type, value.get_type());
+        if let Some(return_type) = return_type {
+            self.check_type_match(&return_type.to_string(), value.get_type());
+        } else {
+            self.function_table.get_mut(&function).unwrap().return_type = Some(value.get_type());
+        }
 
         self.builder.build_return(Some(&value));
 
@@ -231,7 +244,11 @@ impl<'ctx> Visitor<'ctx> for CodeGenerator<'ctx> {
 
         let function_info = FunctionInfo {
             params,
-            return_type: stmt.func_decl.return_type.clone(),
+            return_type: if let Some(return_type) = &stmt.func_decl.return_type {
+                Some(self.get_type(return_type))
+            } else {
+                None
+            },
         };
 
         self.function_table.insert(function, function_info);
