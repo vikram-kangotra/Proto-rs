@@ -205,6 +205,8 @@ impl Iterator for Lexer {
             ')' => Some(Token::new(TokenKind::RightParen, self.line, self.column)),
             '{' => Some(Token::new(TokenKind::LeftBrace, self.line, self.column)),
             '}' => Some(Token::new(TokenKind::RightBrace, self.line, self.column)),
+            '[' => Some(Token::new(TokenKind::LeftBracket, self.line, self.column)),
+            ']' => Some(Token::new(TokenKind::RightBracket, self.line, self.column)),
             ',' => Some(Token::new(TokenKind::Comma, self.line, self.column)),
             ':' => Some(Token::new(TokenKind::Colon, self.line, self.column)),
             ';' => Some(Token::new(TokenKind::Semicolon, self.line, self.column)),
