@@ -1,4 +1,4 @@
-use super::{visitor::Visitor, expr::Expr};
+use super::{visitor::Visitor, expr::Expr, type_::Type};
 
 use proto_rs_macros::Stmt;
 
@@ -22,12 +22,12 @@ impl<'ctx> ExprStmt<'ctx> {
 #[derive(Stmt)]
 pub struct VarDeclStmt<'ctx> {
     pub name: String,
-    pub type_: Option<String>,
+    pub type_: Type,
     pub expr: Box<dyn Expr<'ctx> + 'ctx>,
 }
 
 impl<'ctx> VarDeclStmt<'ctx> {
-    pub fn new(name: String, type_: Option<String>, expr: Box<dyn Expr<'ctx> + 'ctx>) -> Self {
+    pub fn new(name: String, type_: Type, expr: Box<dyn Expr<'ctx> + 'ctx>) -> Self {
         Self {
             name,
             type_,
@@ -115,11 +115,11 @@ impl ContinueStmt {
 #[derive(Clone, Eq, PartialEq)]
 pub struct Param {
     pub name: String,
-    pub type_: String,
+    pub type_: Type,
 }
 
 impl Param {
-    pub fn new(name: String, type_: String) -> Self {
+    pub fn new(name: String, type_: Type) -> Self {
         Self {
             name,
             type_,
@@ -131,11 +131,11 @@ impl Param {
 pub struct FunctionDeclStmt {
     pub name: String,
     pub params: Vec<Param>,
-    pub return_type: Option<String>,
+    pub return_type: Type,
 }
 
 impl FunctionDeclStmt {
-    pub fn new(name: String, params: Vec<Param>, return_type: Option<String>) -> Self {
+    pub fn new(name: String, params: Vec<Param>, return_type: Type) -> Self {
         Self {
             name,
             params,

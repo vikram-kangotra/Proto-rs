@@ -5,8 +5,10 @@ use crate::frontend::token::TokenKind;
 
 use std::iter::Peekable;
 
-use super::expr::{VariableExpr, VarAssignExpr, CallExpr, LiteralType, IntType, FloatType};
+use super::expr::{VariableExpr, VarAssignExpr, CallExpr};
 use super::stmt::{Stmt, ExprStmt, VarDeclStmt, ReturnStmt, BlockStmt, IfStmt, WhileStmt, BreakStmt, ContinueStmt, FunctionDeclStmt, FunctionDefStmt, Param};
+use super::type_::{Type, LiteralType, IntType, FloatType};
+use super::value::{LiteralValue, FloatValue, IntValue};
 
 pub struct Parser {
     lexer: Peekable<Lexer>,
@@ -52,10 +54,54 @@ impl<'ctx> Parser {
         }
     }
 
-    fn is_type(&self, type_: &str) -> bool {
-        match type_ {
-            "i8" | "i16" | "i32" | "i64" => true,
-            _ => false,
+    fn try_parse_type(&mut self) -> Option<Type> {
+        match self.lexer.peek().unwrap_or(&Token::default()).kind {
+            TokenKind::LeftParen => {
+                self.lexer.next();
+                self.consume(TokenKind::RightParen);
+                Some(Type::Void)
+            }
+            TokenKind::U8 => {
+                self.lexer.next();
+                Some(Type::Literal(LiteralType::Int(IntType::U8)))
+            },
+            TokenKind::U16 => {
+                self.lexer.next();
+                Some(Type::Literal(LiteralType::Int(IntType::U16)))
+            },
+            TokenKind::U32 => {
+                self.lexer.next();
+                Some(Type::Literal(LiteralType::Int(IntType::U32)))
+            },
+            TokenKind::U64 => {
+                self.lexer.next();
+                Some(Type::Literal(LiteralType::Int(IntType::U64)))
+            },
+            TokenKind::I8 => {
+                self.lexer.next();
+                Some(Type::Literal(LiteralType::Int(IntType::I8)))
+            },
+            TokenKind::I16 => {
+                self.lexer.next();
+                Some(Type::Literal(LiteralType::Int(IntType::I16)))
+            },
+            TokenKind::I32 => {
+                self.lexer.next();
+                Some(Type::Literal(LiteralType::Int(IntType::I32)))
+            },
+            TokenKind::I64 => {
+                self.lexer.next();
+                Some(Type::Literal(LiteralType::Int(IntType::I64)))
+            },
+            TokenKind::F32 => {
+                self.lexer.next();
+                Some(Type::Literal(LiteralType::Float(FloatType::F32)))
+            },
+            TokenKind::F64 => {
+                self.lexer.next();
+                Some(Type::Literal(LiteralType::Float(FloatType::F64)))
+            },
+            _ => None,
         }
     }
 
@@ -64,14 +110,15 @@ impl<'ctx> Parser {
         if let TokenKind::Ident(name) = self.lexer.next().unwrap().kind {
 
             let type_ = if self.lexer.peek().unwrap_or(&Token::default()).kind == TokenKind::Colon {
-                self.consume(TokenKind::Colon);
-                match self.lexer.next().map(|token| token.kind) {
-                    Some(TokenKind::Ident(type_)) if self.is_type(&type_) => Some(type_),
-                    Some(kind) => panic!("Expected type but got {:?}", kind),
-                    _ => panic!("Expected type but got {:?}", self.lexer.peek().unwrap_or(&Token::default()).kind),
-                }
+                self.lexer.next();
+                self.try_parse_type()
+                        .expect(format!(
+                                "Expected type but got {:?}", 
+                                self.lexer.peek()
+                                    .unwrap_or(&Token::default()).kind)
+                                    .as_str())
             } else {
-                None
+                Type::Inferred
             };
 
             self.consume(TokenKind::Assign);
@@ -139,12 +186,17 @@ impl<'ctx> Parser {
                     Some(TokenKind::Ident(name)) => name,
                     _ => panic!("Expected identifier but got {:?}", self.lexer.peek().unwrap_or(&Token::default()).kind),
                 };
+
                 self.consume(TokenKind::Colon);
-                let type_ = match self.lexer.next().map(|token| token.kind) {
-                    Some(TokenKind::Ident(type_)) if self.is_type(&type_) => type_,
-                    Some(kind) => panic!("Expected type but got {:?}", kind),
-                    _ => panic!("Expected type but got {:?}", self.lexer.peek().unwrap_or(&Token::default()).kind),
-                };
+
+                let type_ = self.try_parse_type()
+                                .expect(format!(
+                                        "Expected type but got {:?}", 
+                                        self.lexer.peek()
+                                            .unwrap_or(&Token::default()).kind)
+                                            .as_str()
+                                );
+
                 params.push(Param::new(name, type_));
 
                 if self.lexer.peek().unwrap_or(&Token::default()).kind != TokenKind::RightParen {
@@ -155,18 +207,15 @@ impl<'ctx> Parser {
 
             let return_type = if self.lexer.peek().unwrap_or(&Token::default()).kind == TokenKind::RightArrow {
                 self.lexer.next();
-
-                match self.lexer.next().map(|token| token.kind) {
-                    Some(TokenKind::LeftParen) => {
-                        self.consume(TokenKind::RightParen);
-                        None
-                    }
-                    Some(TokenKind::Ident(type_)) if self.is_type(&type_) => Some(type_),
-                    Some(kind) => panic!("Expected type but got {:?}", kind),
-                    _ => panic!("Expected type but got {:?}", self.lexer.peek().unwrap_or(&Token::default()).kind),
-                }
+                self.try_parse_type()
+                        .expect(format!(
+                                "Expected type but got {:?}", 
+                                self.lexer.peek()
+                                    .unwrap_or(&Token::default()).kind)
+                                    .as_str()
+                        )
             } else {
-                None
+                Type::Inferred
             };
 
             let func_decl = FunctionDeclStmt::new(name, params, return_type);
@@ -253,37 +302,42 @@ impl<'ctx> Parser {
         }
     }
 
+    fn number(&mut self, token: &Token) -> Result<Box<dyn Expr<'ctx> + 'ctx>, String> {
+        match &token.kind {
+            TokenKind::Int(value) => {
+                let value = value.parse::<u64>().unwrap();
+                match value {
+                    value if value <= u8::MAX as u64 => Ok(Box::new(LiteralExpr::new(LiteralValue::Int(IntValue::U8(value as u8))))),
+                    value if value <= u16::MAX as u64 => Ok(Box::new(LiteralExpr::new(LiteralValue::Int(IntValue::U16(value as u16))))),
+                    value if value <= u32::MAX as u64 => Ok(Box::new(LiteralExpr::new(LiteralValue::Int(IntValue::U32(value as u32))))),
+                    value if value <= u64::MAX as u64 => Ok(Box::new(LiteralExpr::new(LiteralValue::Int(IntValue::U64(value as u64))))),
+                    _ => Err("Integer literal out of range".to_string()),
+                }
+            }
+            _ => Err(format!("Expected integer literal but got {:?}", token.kind)),
+        }
+    }
+
     fn primary(&mut self) -> Box<dyn Expr<'ctx> + 'ctx> {
 
         let token = self.lexer.next().unwrap_or(Token::default());
 
         match token.kind {
-            TokenKind::Char(value) => {
-                Box::new(LiteralExpr::new(LiteralType::Char(value)))
-            }
-            TokenKind::Int(value) => {
-                let value = value.parse::<u64>().unwrap();
-                match value {
-                    value if value <= u8::MAX as u64 => Box::new(LiteralExpr::new(LiteralType::Int(IntType::U8(value as u8)))),
-                    value if value <= u16::MAX as u64 => Box::new(LiteralExpr::new(LiteralType::Int(IntType::U16(value as u16)))),
-                    value if value <= u32::MAX as u64 => Box::new(LiteralExpr::new(LiteralType::Int(IntType::U32(value as u32)))),
-                    value if value <= u64::MAX as u64 => Box::new(LiteralExpr::new(LiteralType::Int(IntType::U64(value as u64)))),
-                    _ => panic!("Integer literal out of range"),
-                }
-            },
+            TokenKind::Char(value) => Box::new(LiteralExpr::new(LiteralValue::Char(value))),
+            TokenKind::Int(_) => self.number(&token).unwrap(),
             TokenKind::Float(value) => {
                 let value = value.parse::<f64>().unwrap();
                 match value {
-                    value if value <= f32::MAX as f64 => Box::new(LiteralExpr::new(LiteralType::Float(FloatType::F32(value as f32)))), 
-                    value if value <= f64::MAX as f64 => Box::new(LiteralExpr::new(LiteralType::Float(FloatType::F64(value as f64)))),
+                    value if value <= f32::MAX as f64 => Box::new(LiteralExpr::new(LiteralValue::Float(FloatValue::F32(value as f32)))), 
+                    value if value <= f64::MAX as f64 => Box::new(LiteralExpr::new(LiteralValue::Float(FloatValue::F64(value as f64)))),
                     _ => panic!("Float literal out of range"),
                 }
             },
             TokenKind::False => {
-                Box::new(LiteralExpr::new(LiteralType::Bool(false)))
+                Box::new(LiteralExpr::new(LiteralValue::Bool(false)))
             }
             TokenKind::True => {
-                Box::new(LiteralExpr::new(LiteralType::Bool(true)))
+                Box::new(LiteralExpr::new(LiteralValue::Bool(true)))
             }
             TokenKind::LeftParen => {
                 let expr = self.expression();

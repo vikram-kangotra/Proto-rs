@@ -145,6 +145,19 @@ impl Lexer {
             "break" => TokenKind::Break,
             "continue" => TokenKind::Continue,
             "fn" => TokenKind::Function,
+
+            "u8" => TokenKind::U8,
+            "u16" => TokenKind::U16,
+            "u32" => TokenKind::U32,
+            "u64" => TokenKind::U64,
+
+            "i8" => TokenKind::I8,
+            "i16" => TokenKind::I16,
+            "i32" => TokenKind::I32,
+            "i64" => TokenKind::I64,
+
+            "f32" => TokenKind::F32,
+            "f64" => TokenKind::F64,
             _ => TokenKind::Ident(lexeme),
         };
 

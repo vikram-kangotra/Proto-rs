@@ -20,15 +20,20 @@ return c;
 
 */
 
-fn putchar(c: i8);
+fn putchar(c: u8);
 
-fn area(a: i8, b: i8) -> i8 {
+fn add(a: u8, b: u8);
+
+fn area(a: u8, b: u8) -> u8 {
     return a * b;
 }
 
-fn main() {
-    let a: i8 = 10;
-    let b: i8 = area(3, 2);
+fn main() -> u8 {
+    let a: u8 = 10;
+    let b: u8 = area(3, 2);
+
+    // TODO: Work on it
+    // let list: [u8; 10] = [1, 2, 3, 4, 5, 6, 7, 8, 9];
 
     putchar('H');
     putchar('e');

@@ -15,7 +15,7 @@ impl Token {
     }
 }
 
-#[derive(Debug, Default, PartialEq)]
+#[derive(Debug, Default, PartialEq, Eq, Hash)]
 pub enum TokenKind {
     #[default]
     Default,
@@ -45,6 +45,20 @@ pub enum TokenKind {
 
     Equal,
     NotEqual,
+
+    // Types
+    U8,
+    U16,
+    U32,
+    U64,
+
+    I8,
+    I16,
+    I32,
+    I64,
+
+    F32,
+    F64,
 
     // Delimiters
     Comma,

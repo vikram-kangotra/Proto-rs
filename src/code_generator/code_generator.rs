@@ -4,11 +4,13 @@ use inkwell::FloatPredicate;
 use inkwell::context::Context;
 use inkwell::module::Module;
 use inkwell::types::{BasicMetadataTypeEnum, BasicTypeEnum};
-use inkwell::values::{IntValue, FloatValue, BasicMetadataValueEnum};
+use inkwell::values::{BasicMetadataValueEnum, IntValue, FloatValue};
 use inkwell::{builder::Builder, values::BasicValueEnum};
 use crate::code_generator::CodeGenerator;
-use crate::frontend::expr::{BinaryExpr, LiteralExpr, UnaryExpr, VariableExpr, VarAssignExpr, CallExpr, IntType, LiteralType, FloatType};
+use crate::frontend::expr::{BinaryExpr, LiteralExpr, UnaryExpr, VariableExpr, VarAssignExpr, CallExpr};
 use crate::frontend::stmt::{Stmt, ExprStmt, VarDeclStmt, ReturnStmt, BlockStmt, IfStmt, WhileStmt, BreakStmt, ContinueStmt, FunctionDeclStmt, FunctionDefStmt};
+use crate::frontend::type_::{Type, LiteralType, self};
+use crate::frontend::value;
 use crate::frontend::visitor::Visitor;
 use crate::frontend::token::TokenKind;
 
@@ -43,15 +45,19 @@ impl<'ctx> CodeGenerator<'ctx> {
         self.symbol_table.pop();
     }
 
-    fn get_type(&self, type_: &str) -> BasicTypeEnum<'ctx> {
+    fn get_type(&self, type_: &Type) -> BasicTypeEnum<'ctx> {
         match type_ {
-            "i8" => self.context.i8_type().into(),
-            "i16" => self.context.i16_type().into(),
-            "i32" => self.context.i32_type().into(),
-            "i64" => self.context.i64_type().into(),
-            "f32" => self.context.f32_type().into(),
-            "f64" => self.context.f64_type().into(),
-            _ => panic!("Unknown type {}", type_),
+            Type::Literal(LiteralType::Int(type_::IntType::U8)) |
+            Type::Literal(LiteralType::Int(type_::IntType::I8)) => self.context.i8_type().into(),
+            Type::Literal(LiteralType::Int(type_::IntType::U16)) |
+            Type::Literal(LiteralType::Int(type_::IntType::I16)) => self.context.i16_type().into(),
+            Type::Literal(LiteralType::Int(type_::IntType::U32)) |
+            Type::Literal(LiteralType::Int(type_::IntType::I32)) => self.context.i32_type().into(),
+            Type::Literal(LiteralType::Int(type_::IntType::U64)) |
+            Type::Literal(LiteralType::Int(type_::IntType::I64)) => self.context.i64_type().into(),
+            Type::Literal(LiteralType::Float(type_::FloatType::F32)) => self.context.f32_type().into(),
+            Type::Literal(LiteralType::Float(type_::FloatType::F64)) => self.context.f64_type().into(),
+            _ => panic!("Unknown type {:?}", type_),
         }
     }
 
@@ -82,8 +88,11 @@ impl<'ctx> Visitor<'ctx> for CodeGenerator<'ctx> {
         let name = &stmt.name;
         let value = stmt.expr.accept(self);
 
-        if let Some(type_) = &stmt.type_ {
-            self.check_type_match(type_, &value.get_type().to_string());
+        match stmt.type_ {
+            Type::Literal(type_) => {}
+            Type::Inferred => {}
+            Type::Array(_, _) => {}
+            Type::Void => {}
         }
 
         let alloca = self.builder.build_alloca(value.get_type(), name);
@@ -211,13 +220,13 @@ impl<'ctx> Visitor<'ctx> for CodeGenerator<'ctx> {
         let params = &stmt.params;
         let param_types = params.iter().map(|param| self.get_type(&param.type_).into()).collect::<Vec<BasicMetadataTypeEnum>>();
 
-        let function_type = if let Some(return_type) = &stmt.return_type {
-            match return_type.as_str() {
-                "()"=> self.context.void_type().fn_type(&param_types, false),
-                _ => self.get_type(return_type).into_int_type().fn_type(&param_types, false),
-            }
-        } else {
-            self.context.void_type().fn_type(&param_types, false)
+        let return_type = &stmt.return_type;
+        let function_type = match return_type {
+            Type::Literal(LiteralType::Int(_)) => self.get_type(return_type).into_int_type().fn_type(&param_types, false),
+            Type::Literal(LiteralType::Float(_)) => self.get_type(return_type).into_float_type().fn_type(&param_types, false),
+            Type::Void => self.context.void_type().fn_type(&param_types, false),
+            Type::Inferred => self.context.void_type().fn_type(&param_types, false),
+            _ => panic!("Unsupported return type"),
         };
 
         if self.module.get_function(name).is_some() {
@@ -238,17 +247,23 @@ impl<'ctx> Visitor<'ctx> for CodeGenerator<'ctx> {
             params.insert(stmt.func_decl.params[i].name.clone(), param);
         }
 
-        let function_info = FunctionInfo {
-            params,
-            return_type: if let Some(return_type) = &stmt.func_decl.return_type {
-                Some(self.get_type(return_type))
-            } else {
+        let return_type = &stmt.func_decl.return_type;
+        let return_type = match return_type {
+            Type::Literal(LiteralType::Int(_)) => Some(self.get_type(return_type)),
+            Type::Literal(LiteralType::Float(_)) => Some(self.get_type(return_type)),
+            Type::Inferred => {
                 if stmt.func_decl.name == "main" {
                     Some(self.context.i32_type().into())
                 } else {
                     None
                 }
-            },
+            }
+            _ => panic!("Unsupported return type"),
+        };
+
+        let function_info = FunctionInfo {
+            params,
+            return_type: return_type.into(), 
         };
 
         self.function_table.insert(function, function_info);
@@ -282,22 +297,22 @@ impl<'ctx> Visitor<'ctx> for CodeGenerator<'ctx> {
 
     fn visit_literal_expr(&mut self, expr: &LiteralExpr) -> BasicValueEnum<'ctx> {
         match expr.value {
-            LiteralType::Int(value) => {
+            value::LiteralValue::Int(value) => {
                 match value {
-                    IntType::U8(value) => self.context.i8_type().const_int(value as u64, false).into(),
-                    IntType::U16(value) => self.context.i16_type().const_int(value as u64, false).into(),
-                    IntType::U32(value) => self.context.i32_type().const_int(value as u64, false).into(),
-                    IntType::U64(value) => self.context.i64_type().const_int(value, false).into(),
+                    value::IntValue::U8(value) => self.context.i8_type().const_int(value as u64, false).into(),
+                    value::IntValue::U16(value) => self.context.i16_type().const_int(value as u64, false).into(),
+                    value::IntValue::U32(value) => self.context.i32_type().const_int(value as u64, false).into(),
+                    value::IntValue::U64(value) => self.context.i64_type().const_int(value, false).into(),
                 }
             }
-            LiteralType::Float(value) => {
+            value::LiteralValue::Float(value) => {
                 match value {
-                    FloatType::F32(value) => self.context.f32_type().const_float(value as f64).into(),
-                    FloatType::F64(value) => self.context.f64_type().const_float(value).into(),
+                    value::FloatValue::F32(value) => self.context.f32_type().const_float(value as f64).into(),
+                    value::FloatValue::F64(value) => self.context.f64_type().const_float(value).into(),
                 }
             }
-            LiteralType::Bool(value) => self.context.bool_type().const_int(value as u64, false).into(),
-            LiteralType::Char(value) => self.context.i8_type().const_int(value as u64, false).into(),
+            value::LiteralValue::Bool(value) => self.context.bool_type().const_int(value as u64, false).into(),
+            value::LiteralValue::Char(value) => self.context.i8_type().const_int(value as u64, false).into(),
         }
     }
 

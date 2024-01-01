@@ -4,6 +4,8 @@ use crate::frontend::token::Token;
 
 use proto_rs_macros::Expr;
 
+use super::value::LiteralValue;
+
 pub trait Expr<'ctx> {
     fn accept(&self, visitor: &mut dyn Visitor<'ctx>) -> BasicValueEnum<'ctx>;
 }
@@ -25,36 +27,14 @@ impl<'ctx> BinaryExpr<'ctx> {
     }
 }
 
-#[derive(Copy, Clone)]
-pub enum IntType {
-    U8(u8),
-    U16(u16),
-    U32(u32),
-    U64(u64),
-}
-
-#[derive(Copy, Clone)]
-pub enum FloatType {
-    F32(f32),
-    F64(f64),
-}
-
-#[derive(Copy, Clone)]
-pub enum LiteralType {
-    Bool(bool),
-    Char(char),
-    Int(IntType),
-    Float(FloatType),
-}
-
 #[derive(Expr)]
 pub struct LiteralExpr {
-    pub value: LiteralType,
+    pub value: LiteralValue,
 }
 
 impl LiteralExpr {
 
-    pub fn new(value: LiteralType) -> Self {
+    pub fn new(value: LiteralValue) -> Self {
         Self {
             value,
         }
@@ -118,3 +98,20 @@ impl<'ctx> CallExpr<'ctx> {
         }
     }
 }
+
+/*
+#[derive(Expr)]
+pub struct ArrayExpr<'ctx> {
+    pub ty: Type,
+    pub values: Vec<Box<dyn Expr<'ctx> + 'ctx>>,
+}
+
+impl<'ctx> ArrayExpr<'ctx> {
+    pub fn new(ty: Type, values: Vec<Box<dyn Expr<'ctx> + 'ctx>>) -> Self {
+        Self {
+            ty,
+            values,
+        }
+    }
+}
+*/
