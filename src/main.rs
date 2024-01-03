@@ -1,3 +1,4 @@
+mod compile_time_evaluator;
 mod code_generator;
 mod compiler;
 mod frontend;

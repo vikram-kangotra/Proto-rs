@@ -10,7 +10,7 @@ use crate::code_generator::CodeGenerator;
 use crate::frontend::expr::{BinaryExpr, LiteralExpr, UnaryExpr, VariableExpr, VarAssignExpr, CallExpr};
 use crate::frontend::stmt::{Stmt, ExprStmt, VarDeclStmt, ReturnStmt, BlockStmt, IfStmt, WhileStmt, BreakStmt, ContinueStmt, FunctionDeclStmt, FunctionDefStmt};
 use crate::frontend::type_::{Type, LiteralType, self};
-use crate::frontend::value;
+use crate::frontend::value::{self, Value};
 use crate::frontend::visitor::Visitor;
 use crate::frontend::token::TokenKind;
 
@@ -86,7 +86,7 @@ impl<'ctx> Visitor<'ctx> for CodeGenerator<'ctx> {
 
     fn visit_var_decl_stmt(&mut self, stmt: &VarDeclStmt<'ctx>) {
         let name = &stmt.name;
-        let value = stmt.expr.accept(self);
+        let value = stmt.expr.accept(self).as_llvm_basic_value_enum();
 
         match stmt.type_ {
             Type::Literal(type_) => {}
@@ -108,7 +108,7 @@ impl<'ctx> Visitor<'ctx> for CodeGenerator<'ctx> {
     }
 
     fn visit_return_stmt(&mut self, stmt: &ReturnStmt<'ctx>) {
-        let value = stmt.expr.accept(self);
+        let value = stmt.expr.accept(self).as_llvm_basic_value_enum();
        
         let function = self.builder.get_insert_block().unwrap().get_parent().unwrap();
         let return_type = self.function_table.get(&function).unwrap().return_type.as_ref();
@@ -147,8 +147,7 @@ impl<'ctx> Visitor<'ctx> for CodeGenerator<'ctx> {
 
         self.builder.build_unconditional_branch(cond_block);
         self.builder.position_at_end(cond_block);
-        let condition = stmt.cond.accept(self);
-        let condition = condition.into_int_value();
+        let condition = stmt.cond.accept(self).as_llvm_basic_value_enum().into_int_value();
 
         self.builder.build_conditional_branch(condition, then_block, else_block);
 
@@ -174,8 +173,7 @@ impl<'ctx> Visitor<'ctx> for CodeGenerator<'ctx> {
         self.builder.build_unconditional_branch(cond_block);
 
         self.builder.position_at_end(cond_block);
-        let condition = stmt.cond.accept(self);
-        let condition = condition.into_int_value();
+        let condition = stmt.cond.accept(self).as_llvm_basic_value_enum().into_int_value(); 
         self.builder.build_conditional_branch(condition, body_block, end_block);
 
         self.builder.position_at_end(body_block);
@@ -274,7 +272,7 @@ impl<'ctx> Visitor<'ctx> for CodeGenerator<'ctx> {
         stmt.body.accept(self);
     }
 
-    fn visit_call_expr(&mut self, expr: &CallExpr<'ctx>) -> BasicValueEnum<'ctx> {
+    fn visit_call_expr(&mut self, expr: &CallExpr<'ctx>) -> Value<'ctx> {
         let name = &expr.callee;
 
         let function = match self.module.get_function(name) {
@@ -286,16 +284,16 @@ impl<'ctx> Visitor<'ctx> for CodeGenerator<'ctx> {
             panic!("Function '{}' takes {} arguments, but {} were supplied", name, function.count_params(), expr.args.len());
         }
 
-        let args = expr.args.iter().map(|arg| arg.accept(self).into()).collect::<Vec<BasicMetadataValueEnum>>();
+        let args = expr.args.iter().map(|arg| arg.accept(self).as_llvm_basic_value_enum().into()).collect::<Vec<BasicMetadataValueEnum>>();
 
         let ret_value = self.builder
             .build_call(function, &args, &name)
             .try_as_basic_value().left();
 
-        ret_value.unwrap_or_else(|| self.context.i32_type().const_zero().into())
+        Value::LLVMBasicValueEnum(ret_value.unwrap_or_else(|| self.context.i32_type().const_zero().into()))
     }
 
-    fn visit_literal_expr(&mut self, expr: &LiteralExpr) -> BasicValueEnum<'ctx> {
+    fn visit_literal_expr(&mut self, expr: &LiteralExpr) -> Value<'ctx> {
         match expr.value {
             value::LiteralValue::Int(value) => {
                 match value {
@@ -316,32 +314,32 @@ impl<'ctx> Visitor<'ctx> for CodeGenerator<'ctx> {
         }
     }
 
-    fn visit_variable_expr(&mut self, expr: &VariableExpr) -> BasicValueEnum<'ctx> {
+    fn visit_variable_expr(&mut self, expr: &VariableExpr) -> Value<'ctx> {
         let name = &expr.name;
 
         for scope in self.symbol_table.iter().rev() {
             if let Some(variable_info) = scope.get(name) {
                 let alloca = variable_info.alloca;
-                return self.builder.build_load(variable_info.type_, alloca, &name);
+                return self.builder.build_load(variable_info.type_, alloca, &name).into();
             }
         }
 
         let function = self.builder.get_insert_block().unwrap().get_parent().unwrap();
         if let Some(param) = self.function_table.get(&function).unwrap().params.get(name) {
-            return param.clone();
+            return param.clone().into();
         }
 
         panic!("Variable '{}' not found in current scope", name);
     }
     
-    fn visit_var_assign_expr(&mut self, expr: &VarAssignExpr<'ctx>) -> BasicValueEnum<'ctx> {
+    fn visit_var_assign_expr(&mut self, expr: &VarAssignExpr<'ctx>) -> Value<'ctx> {
         let name = &expr.name;
         let value = expr.value.accept(self);
 
         for scope in self.symbol_table.iter().rev() {
             if let Some(variable_info) = scope.get(name) {
                 let alloca = variable_info.alloca;
-                self.builder.build_store(alloca, value);
+                self.builder.build_store(alloca, value.as_llvm_basic_value_enum());
                 return value;
             }
         }
@@ -349,17 +347,17 @@ impl<'ctx> Visitor<'ctx> for CodeGenerator<'ctx> {
         panic!("Variable '{}' not found in current scope", name);
     }
 
-    fn visit_unary_expr(&mut self, expr: &UnaryExpr<'ctx>) -> BasicValueEnum<'ctx> {
+    fn visit_unary_expr(&mut self, expr: &UnaryExpr<'ctx>) -> Value<'ctx> {
         let operand = expr.right.accept(self);
 
         match operand {
-            BasicValueEnum::IntValue(value) => self.visit_unary_expr_int(value, expr),
-            BasicValueEnum::FloatValue(value) => self.visit_unary_expr_float(value, expr),
+            Value::LLVMBasicValueEnum(BasicValueEnum::IntValue(value)) => self.visit_unary_expr_int(value, expr),
+            Value::LLVMBasicValueEnum(BasicValueEnum::FloatValue(value)) => self.visit_unary_expr_float(value, expr),
             _ => panic!("Unexpected token"),
         }
     }
 
-    fn visit_unary_expr_int(&mut self, value: IntValue<'ctx>, expr: &UnaryExpr<'ctx>) -> BasicValueEnum<'ctx> {
+    fn visit_unary_expr_int(&mut self, value: IntValue<'ctx>, expr: &UnaryExpr<'ctx>) -> Value<'ctx> {
         match expr.op.kind {
             TokenKind::Minus => self.builder.build_int_neg(value, "neg").into(),
             TokenKind::Plus => value.into(),
@@ -367,7 +365,7 @@ impl<'ctx> Visitor<'ctx> for CodeGenerator<'ctx> {
         }
     }
 
-    fn visit_unary_expr_float(&mut self, value: FloatValue<'ctx>, expr: &UnaryExpr<'ctx>) -> BasicValueEnum<'ctx> {
+    fn visit_unary_expr_float(&mut self, value: FloatValue<'ctx>, expr: &UnaryExpr<'ctx>) -> Value<'ctx> {
         match expr.op.kind {
             TokenKind::Minus => self.builder.build_float_neg(value, "neg").into(),
             TokenKind::Plus => value.into(),
@@ -375,9 +373,9 @@ impl<'ctx> Visitor<'ctx> for CodeGenerator<'ctx> {
         }
     }
 
-    fn visit_binary_expr(&mut self, expr: &BinaryExpr<'ctx>) -> BasicValueEnum<'ctx> {
-        let left = expr.left.accept(self);
-        let right = expr.right.accept(self);
+    fn visit_binary_expr(&mut self, expr: &BinaryExpr<'ctx>) -> Value<'ctx> {
+        let left = expr.left.accept(self).as_llvm_basic_value_enum();
+        let right = expr.right.accept(self).as_llvm_basic_value_enum();
 
         match (left, right) {
             (BasicValueEnum::IntValue(left), BasicValueEnum::IntValue(right)) => self.visit_binary_expr_int_int(left, right, expr),
@@ -388,7 +386,7 @@ impl<'ctx> Visitor<'ctx> for CodeGenerator<'ctx> {
         }
     }
 
-    fn visit_binary_expr_int_int(&mut self, left: IntValue<'ctx>, right: IntValue<'ctx>, expr: &BinaryExpr<'ctx>) -> BasicValueEnum<'ctx> {
+    fn visit_binary_expr_int_int(&mut self, left: IntValue<'ctx>, right: IntValue<'ctx>, expr: &BinaryExpr<'ctx>) -> Value<'ctx> {
 
         if left.get_type() != right.get_type() {
             if left.get_type().get_bit_width() > right.get_type().get_bit_width() {
@@ -425,7 +423,7 @@ impl<'ctx> Visitor<'ctx> for CodeGenerator<'ctx> {
         }
     }
 
-    fn visit_binary_expr_int_float(&mut self, left: IntValue<'ctx>, right: FloatValue<'ctx>, expr: &BinaryExpr<'ctx>) -> BasicValueEnum<'ctx> {
+    fn visit_binary_expr_int_float(&mut self, left: IntValue<'ctx>, right: FloatValue<'ctx>, expr: &BinaryExpr<'ctx>) -> Value<'ctx> {
         let left = self.builder.build_signed_int_to_float(left, right.get_type(), "int_to_float");
 
         match expr.op.kind {
@@ -449,7 +447,7 @@ impl<'ctx> Visitor<'ctx> for CodeGenerator<'ctx> {
         } 
     }
 
-    fn visit_binary_expr_float_int(&mut self, left: FloatValue<'ctx>, right: IntValue<'ctx>, expr: &BinaryExpr<'ctx>) -> BasicValueEnum<'ctx> {
+    fn visit_binary_expr_float_int(&mut self, left: FloatValue<'ctx>, right: IntValue<'ctx>, expr: &BinaryExpr<'ctx>) -> Value<'ctx> {
         let right = self.builder.build_signed_int_to_float(right, left.get_type(), "int_to_float");
 
         match expr.op.kind {
@@ -473,7 +471,7 @@ impl<'ctx> Visitor<'ctx> for CodeGenerator<'ctx> {
         } 
     }
 
-    fn visit_binary_expr_float_float(&mut self, left: FloatValue<'ctx>, right: FloatValue<'ctx>, expr: &BinaryExpr<'ctx>) -> BasicValueEnum<'ctx> {
+    fn visit_binary_expr_float_float(&mut self, left: FloatValue<'ctx>, right: FloatValue<'ctx>, expr: &BinaryExpr<'ctx>) -> Value<'ctx> {
         match expr.op.kind {
             TokenKind::Plus => self.builder.build_float_add(left, right, "add").into(),
             TokenKind::Minus => self.builder.build_float_sub(left, right, "sub").into(),

@@ -1,13 +1,12 @@
-use inkwell::values::BasicValueEnum;
 use crate::frontend::visitor::Visitor;
 use crate::frontend::token::Token;
 
 use proto_rs_macros::Expr;
 
-use super::value::LiteralValue;
+use super::value::{LiteralValue, Value};
 
 pub trait Expr<'ctx> {
-    fn accept(&self, visitor: &mut dyn Visitor<'ctx>) -> BasicValueEnum<'ctx>;
+    fn accept(&self, visitor: &mut dyn Visitor<'ctx>) -> Value<'ctx>;
 }
 
 #[derive(Expr)]
