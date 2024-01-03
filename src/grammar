@@ -29,14 +29,14 @@ I64: 'i64';
 F32: 'f32';
 F64: 'f64';
 
-DATA_TYPE: U8 | U16 | U32 | U64 
+data_type: U8 | U16 | U32 | U64 
             | I8 | I16 | I32 | I64
             | F32 | F64
-            | LIST_TYPE ;
+            | list_type ;
 
-RETURN_TYPE: DATA_TYPE | '()';
+return_type: data_type | '()';
 
-LIST_TYPE: '[' DATA_TYPE ';' INT ']' ;
+list_type: '[' data_type ';' INT ']' ;
 
 COMMENT: '//' .* '\n' | '/*' .* '*/'
 
