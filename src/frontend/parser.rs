@@ -307,10 +307,10 @@ impl<'ctx> Parser {
             TokenKind::Int(value) => {
                 let value = value.parse::<u64>().unwrap();
                 match value {
-                    value if value <= u8::MAX as u64 => Ok(Box::new(LiteralExpr::new(LiteralValue::Int(IntValue::U8(value as u8))))),
-                    value if value <= u16::MAX as u64 => Ok(Box::new(LiteralExpr::new(LiteralValue::Int(IntValue::U16(value as u16))))),
-                    value if value <= u32::MAX as u64 => Ok(Box::new(LiteralExpr::new(LiteralValue::Int(IntValue::U32(value as u32))))),
-                    value if value <= u64::MAX as u64 => Ok(Box::new(LiteralExpr::new(LiteralValue::Int(IntValue::U64(value as u64))))),
+                    value if value <= u8::MAX as u64 => Ok(Box::new(LiteralExpr::new(LiteralValue::Int(IntValue::I8(value as i8))))),
+                    value if value <= u16::MAX as u64 => Ok(Box::new(LiteralExpr::new(LiteralValue::Int(IntValue::I16(value as i16))))),
+                    value if value <= u32::MAX as u64 => Ok(Box::new(LiteralExpr::new(LiteralValue::Int(IntValue::I32(value as i32))))),
+                    value if value <= u64::MAX as u64 => Ok(Box::new(LiteralExpr::new(LiteralValue::Int(IntValue::I64(value as i64))))),
                     _ => Err("Integer literal out of range".to_string()),
                 }
             }

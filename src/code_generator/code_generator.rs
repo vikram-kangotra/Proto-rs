@@ -4,13 +4,13 @@ use inkwell::FloatPredicate;
 use inkwell::context::Context;
 use inkwell::module::Module;
 use inkwell::types::{BasicMetadataTypeEnum, BasicTypeEnum};
-use inkwell::values::{BasicMetadataValueEnum, IntValue, FloatValue};
+use inkwell::values::{FloatValue, IntValue, BasicMetadataValueEnum};
 use inkwell::{builder::Builder, values::BasicValueEnum};
 use crate::code_generator::CodeGenerator;
 use crate::frontend::expr::{BinaryExpr, LiteralExpr, UnaryExpr, VariableExpr, VarAssignExpr, CallExpr};
 use crate::frontend::stmt::{Stmt, ExprStmt, VarDeclStmt, ReturnStmt, BlockStmt, IfStmt, WhileStmt, BreakStmt, ContinueStmt, FunctionDeclStmt, FunctionDefStmt};
 use crate::frontend::type_::{Type, LiteralType, self};
-use crate::frontend::value::{self, Value};
+use crate::frontend::value::{self, Value, IntegerValue, FloatingValue};
 use crate::frontend::visitor::Visitor;
 use crate::frontend::token::TokenKind;
 
@@ -89,7 +89,7 @@ impl<'ctx> Visitor<'ctx> for CodeGenerator<'ctx> {
         let value = stmt.expr.accept(self).as_llvm_basic_value_enum();
 
         match stmt.type_ {
-            Type::Literal(type_) => {}
+            Type::Literal(_) => {}
             Type::Inferred => {}
             Type::Array(_, _) => {}
             Type::Void => {}
@@ -297,10 +297,10 @@ impl<'ctx> Visitor<'ctx> for CodeGenerator<'ctx> {
         match expr.value {
             value::LiteralValue::Int(value) => {
                 match value {
-                    value::IntValue::U8(value) => self.context.i8_type().const_int(value as u64, false).into(),
-                    value::IntValue::U16(value) => self.context.i16_type().const_int(value as u64, false).into(),
-                    value::IntValue::U32(value) => self.context.i32_type().const_int(value as u64, false).into(),
-                    value::IntValue::U64(value) => self.context.i64_type().const_int(value, false).into(),
+                    value::IntValue::I8(value) => self.context.i8_type().const_int(value as u64, false).into(),
+                    value::IntValue::I16(value) => self.context.i16_type().const_int(value as u64, false).into(),
+                    value::IntValue::I32(value) => self.context.i32_type().const_int(value as u64, false).into(),
+                    value::IntValue::I64(value) => self.context.i64_type().const_int(value as u64, false).into(),
                 }
             }
             value::LiteralValue::Float(value) => {
@@ -351,13 +351,16 @@ impl<'ctx> Visitor<'ctx> for CodeGenerator<'ctx> {
         let operand = expr.right.accept(self);
 
         match operand {
-            Value::LLVMBasicValueEnum(BasicValueEnum::IntValue(value)) => self.visit_unary_expr_int(value, expr),
-            Value::LLVMBasicValueEnum(BasicValueEnum::FloatValue(value)) => self.visit_unary_expr_float(value, expr),
+            Value::LLVMBasicValueEnum(BasicValueEnum::IntValue(value)) => self.visit_unary_expr_int(value.into(), expr),
+            Value::LLVMBasicValueEnum(BasicValueEnum::FloatValue(value)) => self.visit_unary_expr_float(value.into(), expr),
             _ => panic!("Unexpected token"),
         }
     }
 
-    fn visit_unary_expr_int(&mut self, value: IntValue<'ctx>, expr: &UnaryExpr<'ctx>) -> Value<'ctx> {
+    fn visit_unary_expr_int(&mut self, value: IntegerValue<'ctx>, expr: &UnaryExpr<'ctx>) -> Value<'ctx> {
+
+        let value: IntValue = value.into();
+
         match expr.op.kind {
             TokenKind::Minus => self.builder.build_int_neg(value, "neg").into(),
             TokenKind::Plus => value.into(),
@@ -365,7 +368,10 @@ impl<'ctx> Visitor<'ctx> for CodeGenerator<'ctx> {
         }
     }
 
-    fn visit_unary_expr_float(&mut self, value: FloatValue<'ctx>, expr: &UnaryExpr<'ctx>) -> Value<'ctx> {
+    fn visit_unary_expr_float(&mut self, value: FloatingValue<'ctx>, expr: &UnaryExpr<'ctx>) -> Value<'ctx> {
+
+        let value: FloatValue = value.into();
+
         match expr.op.kind {
             TokenKind::Minus => self.builder.build_float_neg(value, "neg").into(),
             TokenKind::Plus => value.into(),
@@ -378,23 +384,26 @@ impl<'ctx> Visitor<'ctx> for CodeGenerator<'ctx> {
         let right = expr.right.accept(self).as_llvm_basic_value_enum();
 
         match (left, right) {
-            (BasicValueEnum::IntValue(left), BasicValueEnum::IntValue(right)) => self.visit_binary_expr_int_int(left, right, expr),
-            (BasicValueEnum::IntValue(left), BasicValueEnum::FloatValue(right)) => self.visit_binary_expr_int_float(left, right, expr),
-            (BasicValueEnum::FloatValue(left), BasicValueEnum::IntValue(right)) => self.visit_binary_expr_float_int(left, right, expr),
-            (BasicValueEnum::FloatValue(left), BasicValueEnum::FloatValue(right)) => self.visit_binary_expr_float_float(left, right, expr),
+            (BasicValueEnum::IntValue(left), BasicValueEnum::IntValue(right)) => self.visit_binary_expr_int_int(left.into(), right.into(), expr),
+            (BasicValueEnum::IntValue(left), BasicValueEnum::FloatValue(right)) => self.visit_binary_expr_int_float(left.into(), right.into(), expr),
+            (BasicValueEnum::FloatValue(left), BasicValueEnum::IntValue(right)) => self.visit_binary_expr_float_int(left.into(), right.into(), expr),
+            (BasicValueEnum::FloatValue(left), BasicValueEnum::FloatValue(right)) => self.visit_binary_expr_float_float(left.into(), right.into(), expr),
             _ => panic!("Unexpected token: left: {:?}, right: {:?}", left, right),
         }
     }
 
-    fn visit_binary_expr_int_int(&mut self, left: IntValue<'ctx>, right: IntValue<'ctx>, expr: &BinaryExpr<'ctx>) -> Value<'ctx> {
+    fn visit_binary_expr_int_int(&mut self, left: IntegerValue<'ctx>, right: IntegerValue<'ctx>, expr: &BinaryExpr<'ctx>) -> Value<'ctx> {
+
+        let left: IntValue = left.into();
+        let right: IntValue = right.into();
 
         if left.get_type() != right.get_type() {
             if left.get_type().get_bit_width() > right.get_type().get_bit_width() {
                 let right = self.builder.build_int_z_extend(right, left.get_type(), "z_extend");
-                return self.visit_binary_expr_int_int(left, right, expr);
+                return self.visit_binary_expr_int_int(left.into(), right.into(), expr);
             } else {
                 let left = self.builder.build_int_z_extend(left, right.get_type(), "z_extend");
-                return self.visit_binary_expr_int_int(left, right, expr);
+                return self.visit_binary_expr_int_int(left.into(), right.into(), expr);
             }
         }
 
@@ -423,7 +432,11 @@ impl<'ctx> Visitor<'ctx> for CodeGenerator<'ctx> {
         }
     }
 
-    fn visit_binary_expr_int_float(&mut self, left: IntValue<'ctx>, right: FloatValue<'ctx>, expr: &BinaryExpr<'ctx>) -> Value<'ctx> {
+    fn visit_binary_expr_int_float(&mut self, left: IntegerValue<'ctx>, right: FloatingValue<'ctx>, expr: &BinaryExpr<'ctx>) -> Value<'ctx> {
+
+        let left: IntValue = left.into();
+        let right: FloatValue = right.into();
+
         let left = self.builder.build_signed_int_to_float(left, right.get_type(), "int_to_float");
 
         match expr.op.kind {
@@ -447,7 +460,11 @@ impl<'ctx> Visitor<'ctx> for CodeGenerator<'ctx> {
         } 
     }
 
-    fn visit_binary_expr_float_int(&mut self, left: FloatValue<'ctx>, right: IntValue<'ctx>, expr: &BinaryExpr<'ctx>) -> Value<'ctx> {
+    fn visit_binary_expr_float_int(&mut self, left: FloatingValue<'ctx>, right: IntegerValue<'ctx>, expr: &BinaryExpr<'ctx>) -> Value<'ctx> {
+
+        let left: FloatValue = left.into();
+        let right: IntValue = right.into();
+
         let right = self.builder.build_signed_int_to_float(right, left.get_type(), "int_to_float");
 
         match expr.op.kind {
@@ -471,7 +488,11 @@ impl<'ctx> Visitor<'ctx> for CodeGenerator<'ctx> {
         } 
     }
 
-    fn visit_binary_expr_float_float(&mut self, left: FloatValue<'ctx>, right: FloatValue<'ctx>, expr: &BinaryExpr<'ctx>) -> Value<'ctx> {
+    fn visit_binary_expr_float_float(&mut self, left: FloatingValue<'ctx>, right: FloatingValue<'ctx>, expr: &BinaryExpr<'ctx>) -> Value<'ctx> {
+
+        let left: FloatValue = left.into();
+        let right: FloatValue = right.into();
+        
         match expr.op.kind {
             TokenKind::Plus => self.builder.build_float_add(left, right, "add").into(),
             TokenKind::Minus => self.builder.build_float_sub(left, right, "sub").into(),
