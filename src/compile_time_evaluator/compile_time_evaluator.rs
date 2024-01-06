@@ -1,4 +1,4 @@
-use crate::frontend::{visitor::Visitor, stmt::{FunctionDefStmt, FunctionDeclStmt, ExprStmt, VarDeclStmt, ReturnStmt, BlockStmt, IfStmt, WhileStmt, BreakStmt, ContinueStmt}, expr::{LiteralExpr, VariableExpr, VarAssignExpr, UnaryExpr, BinaryExpr, CallExpr}, value::{Value, LiteralValue, IntegerValue, FloatingValue, IntValue, FloatValue}, token::TokenKind};
+use crate::frontend::{visitor::Visitor, expr::{LiteralExpr, UnaryExpr, BinaryExpr}, value::{Value, LiteralValue, IntegerValue, FloatingValue, IntValue, FloatValue}, token::TokenKind};
 
 use super::CompileTimeEvaluator;
 
@@ -12,9 +12,6 @@ impl<'ctx> Visitor<'ctx> for CompileTimeEvaluator {
     fn visit_literal_expr(&mut self, expr: &LiteralExpr) -> Value<'ctx> { 
         expr.value.into()
     }
-
-    fn visit_variable_expr(&mut self, expr: &VariableExpr) -> Value<'ctx> { panic!("CompileTimeEvaluator::visit_variable_expr() should never be called") }
-    fn visit_var_assign_expr(&mut self, expr: &VarAssignExpr<'ctx>) -> Value<'ctx> { panic!("CompileTimeEvaluator::visit_var_assign_expr() should never be called") }
 
     fn visit_unary_expr(&mut self, expr: &UnaryExpr<'ctx>) -> Value<'ctx> { 
         let operand = expr.right.accept(self);
@@ -179,18 +176,4 @@ impl<'ctx> Visitor<'ctx> for CompileTimeEvaluator {
             _ => panic!("Unexpected token"),
         }
     }
-
-    fn visit_call_expr(&mut self, expr: &CallExpr<'ctx>) -> Value<'ctx> { panic!("CompileTimeEvaluator::visit_call_expr() should never be called") }
-
-    fn visit_expr_stmt(&mut self, stmt: &ExprStmt<'ctx>) { panic!("CompileTimeEvaluator::visit_expr_stmt() should never be called") }
-    fn visit_var_decl_stmt(&mut self, stmt: &VarDeclStmt<'ctx>) { panic!("CompileTimeEvaluator::visit_var_decl_stmt() should never be called") }
-    fn visit_return_stmt(&mut self, stmt: &ReturnStmt<'ctx>) { panic!("CompileTimeEvaluator::visit_return_stmt() should never be called") }
-    fn visit_block_stmt(&mut self, stmt: &BlockStmt<'ctx>) { panic!("CompileTimeEvaluator::visit_block_stmt() should never be called") }
-    fn visit_if_stmt(&mut self, stmt: &IfStmt<'ctx>) { panic!("CompileTimeEvaluator::visit_if_stmt() should never be called") }
-    fn visit_while_stmt(&mut self, stmt: &WhileStmt<'ctx>) { panic!("CompileTimeEvaluator::visit_while_stmt() should never be called") }
-    fn visit_break_stmt(&mut self, _stmt: &BreakStmt) { panic!("CompileTimeEvaluator::visit_break_stmt() should never be called") }
-    fn visit_continue_stmt(&mut self, _stmt: &ContinueStmt) { panic!("CompileTimeEvaluator::visit_continue_stmt() should never be called") }
-
-    fn visit_function_decl_stmt(&mut self, stmt: &FunctionDeclStmt) { panic!("CompileTimeEvaluator::visit_function_decl_stmt() should never be called") }
-    fn visit_function_def_stmt(&mut self, _stmt: &FunctionDefStmt<'ctx>) { panic!("CompileTimeEvaluator::visit_function_def_stmt() should never be called") }
 }

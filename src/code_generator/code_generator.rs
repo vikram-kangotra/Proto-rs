@@ -91,7 +91,7 @@ impl<'ctx> Visitor<'ctx> for CodeGenerator<'ctx> {
         match stmt.type_ {
             Type::Literal(_) => {}
             Type::Inferred => {}
-            Type::Array(_, _) => {}
+            Type::List(_, _) => {}
             Type::Void => {}
         }
 

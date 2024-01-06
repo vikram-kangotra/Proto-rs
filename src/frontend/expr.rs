@@ -3,7 +3,7 @@ use crate::frontend::token::Token;
 
 use proto_rs_macros::Expr;
 
-use super::value::{LiteralValue, Value};
+use super::{value::{LiteralValue, Value}, type_::Type};
 
 pub trait Expr<'ctx> {
     fn accept(&self, visitor: &mut dyn Visitor<'ctx>) -> Value<'ctx>;
@@ -98,14 +98,13 @@ impl<'ctx> CallExpr<'ctx> {
     }
 }
 
-/*
 #[derive(Expr)]
-pub struct ArrayExpr<'ctx> {
+pub struct ListExpr<'ctx> {
     pub ty: Type,
     pub values: Vec<Box<dyn Expr<'ctx> + 'ctx>>,
 }
 
-impl<'ctx> ArrayExpr<'ctx> {
+impl<'ctx> ListExpr<'ctx> {
     pub fn new(ty: Type, values: Vec<Box<dyn Expr<'ctx> + 'ctx>>) -> Self {
         Self {
             ty,
@@ -113,4 +112,3 @@ impl<'ctx> ArrayExpr<'ctx> {
         }
     }
 }
-*/

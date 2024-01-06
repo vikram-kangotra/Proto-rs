@@ -28,7 +28,7 @@ pub enum LiteralType {
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum Type {
     Literal(LiteralType),
-    Array(Box<Type>, usize),
+    List(Box<Type>, usize),
     Inferred,
     Void
 }
