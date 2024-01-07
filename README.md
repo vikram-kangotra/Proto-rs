@@ -9,6 +9,7 @@ Proto-rs is a compiler written in Rust, utilizing LLVM as its backend. This comp
 - `while` loop
 - `break` and `continue` statements
 - `return` statements
+- `list` 
 - arithmetic operations
 - scoped block statements
 - single line and multiple line comments
