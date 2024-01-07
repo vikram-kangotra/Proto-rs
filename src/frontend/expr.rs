@@ -100,15 +100,28 @@ impl<'ctx> CallExpr<'ctx> {
 
 #[derive(Expr)]
 pub struct ListExpr<'ctx> {
-    pub ty: Type,
     pub values: Vec<Box<dyn Expr<'ctx> + 'ctx>>,
 }
 
 impl<'ctx> ListExpr<'ctx> {
-    pub fn new(ty: Type, values: Vec<Box<dyn Expr<'ctx> + 'ctx>>) -> Self {
+    pub fn new(values: Vec<Box<dyn Expr<'ctx> + 'ctx>>) -> Self {
         Self {
-            ty,
             values,
+        }
+    }
+}
+
+#[derive(Expr)]
+pub struct IndexExpr<'ctx> {
+    pub variable: VariableExpr,
+    pub index: Box<dyn Expr<'ctx> + 'ctx>,
+}
+
+impl<'ctx> IndexExpr<'ctx> {
+    pub fn new(variable: VariableExpr, index: Box<dyn Expr<'ctx> + 'ctx>) -> Self {
+        Self {
+            variable,
+            index,
         }
     }
 }

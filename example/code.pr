@@ -22,8 +22,6 @@ return c;
 
 fn putchar(c: u8);
 
-fn add(a: u8, b: u8);
-
 fn area(a: u8, b: u8) -> u8 {
     return a * b;
 }
@@ -32,22 +30,13 @@ fn main() -> u8 {
     let a: u8 = 10;
     let b: u8 = area(3, 2);
 
-    // TODO: Work on it
-    // let list: [u8; 10] = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+    let list = ['A', 'R', 'Y', 'A', 'N'];
 
-    putchar('H');
-    putchar('e');
-    putchar('l');
-    putchar('l');
-    putchar('o');
-    putchar(' ');
-    putchar('W');
-    putchar('o');
-    putchar('r');
-    putchar('l');
-    putchar('d');
-    putchar('!');
-    putchar('\n');
+    let i = 0;
+    while i < 5 {
+        putchar(list[i]);
+        i = i + 1;
+    }
 
     return a + b;
 }

@@ -5,7 +5,7 @@ use crate::frontend::token::TokenKind;
 
 use std::iter::Peekable;
 
-use super::expr::{VariableExpr, VarAssignExpr, CallExpr};
+use super::expr::{VariableExpr, VarAssignExpr, CallExpr, ListExpr, IndexExpr};
 use super::stmt::{Stmt, ExprStmt, VarDeclStmt, ReturnStmt, BlockStmt, IfStmt, WhileStmt, BreakStmt, ContinueStmt, FunctionDeclStmt, FunctionDefStmt, Param};
 use super::type_::{Type, LiteralType, IntType, FloatType};
 use super::value::{LiteralValue, FloatValue, IntValue};
@@ -339,6 +339,17 @@ impl<'ctx> Parser {
             TokenKind::True => {
                 Box::new(LiteralExpr::new(LiteralValue::Bool(true)))
             }
+            TokenKind::LeftBracket => {
+                let mut elements = Vec::new();
+                while self.lexer.peek().unwrap().kind != TokenKind::RightBracket {
+                    elements.push(self.expression());
+                    if self.lexer.peek().unwrap().kind != TokenKind::RightBracket {
+                        self.consume(TokenKind::Comma);
+                    }
+                }
+                self.consume(TokenKind::RightBracket);
+                Box::new(ListExpr::new(elements) as ListExpr<'ctx>)
+            }
             TokenKind::LeftParen => {
                 let expr = self.expression();
                 self.consume(TokenKind::RightParen);
@@ -361,7 +372,14 @@ impl<'ctx> Parser {
                     self.consume(TokenKind::RightParen);
                     Box::new(CallExpr::new(name, args) as CallExpr<'ctx>)
                 } else {
-                    Box::new(VariableExpr::new(name))
+                    let var_expr = VariableExpr::new(name);
+                    if self.lexer.peek().unwrap().kind == TokenKind::LeftBracket {
+                        self.lexer.next();
+                        let index = self.expression();
+                        self.consume(TokenKind::RightBracket);
+                        return Box::new(IndexExpr::new(var_expr, index) as IndexExpr<'ctx>)
+                    }
+                    return Box::new(var_expr);
                 }
             },
             TokenKind::Illegal(lexeme) => panic!("Syntax Error (line: {}, column: {}): Illegal token '{}'", token.line, token.column, lexeme),
