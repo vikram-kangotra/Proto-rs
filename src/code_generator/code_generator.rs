@@ -4,10 +4,10 @@ use inkwell::FloatPredicate;
 use inkwell::context::Context;
 use inkwell::module::Module;
 use inkwell::types::{BasicMetadataTypeEnum, BasicTypeEnum};
-use inkwell::values::{FloatValue, IntValue, BasicMetadataValueEnum};
+use inkwell::values::{FloatValue, IntValue, BasicMetadataValueEnum, ArrayValue};
 use inkwell::{builder::Builder, values::BasicValueEnum};
 use crate::code_generator::CodeGenerator;
-use crate::frontend::expr::{BinaryExpr, LiteralExpr, UnaryExpr, VariableExpr, VarAssignExpr, CallExpr, ListExpr, IndexExpr, Expr};
+use crate::frontend::expr::{BinaryExpr, LiteralExpr, UnaryExpr, VariableExpr, VarAssignExpr, CallExpr, ListExpr, IndexExpr};
 use crate::frontend::stmt::{Stmt, ExprStmt, VarDeclStmt, ReturnStmt, BlockStmt, IfStmt, WhileStmt, BreakStmt, ContinueStmt, FunctionDeclStmt, FunctionDefStmt};
 use crate::frontend::type_::{Type, LiteralType, self};
 use crate::frontend::value::{self, Value, IntegerValue, FloatingValue};
@@ -75,6 +75,16 @@ impl<'ctx> CodeGenerator<'ctx> {
         if expected != actual {
             panic!("Expected {}, got {}", expected, actual);
         }
+    }
+
+    fn get_variable_info(&self, name: &str) -> Option<&VariableInfo<'ctx>> {
+        for scope in self.symbol_table.iter().rev() {
+            if let Some(variable_info) = scope.get(name) {
+                return Some(variable_info);
+            }
+        }
+
+        None
     }
 }
 
@@ -298,32 +308,36 @@ impl<'ctx> Visitor<'ctx> for CodeGenerator<'ctx> {
         let mut values = Vec::new();
         for value in &expr.values {
             let value = value.accept(self);
-            values.push(value);
+            values.push(value.as_llvm_basic_value_enum());
         }
 
         let first = values.first().expect("List must have at least one value");
-        let type_ = first.as_llvm_basic_value_enum().get_type();
+        let type_ = first.get_type();
 
         for value in &values {
-            if value.as_llvm_basic_value_enum().get_type() != type_ {
-                panic!("List values must all be of the same type. Expected {}, found {}", type_, value.as_llvm_basic_value_enum().get_type());
+            if value.get_type() != type_ {
+                panic!("List values must all be of the same type. Expected {}, found {}", type_, value.get_type());
             }
         }
 
         match type_ {
             BasicTypeEnum::IntType(_) => {
-                let values = values.iter().map(|value| value.as_llvm_basic_value_enum().into_int_value()).collect::<Vec<IntValue>>();
-                let array = self.context.i32_type().const_array(&values);
+                let values = values.iter().map(|value| value.into_int_value()).collect::<Vec<IntValue>>();
+                let array = type_.into_int_type().const_array(&values);
                 Value::LLVMBasicValueEnum(array.into())
             }
             BasicTypeEnum::FloatType(_) => {
-                let values = values.iter().map(|value| value.as_llvm_basic_value_enum().into_float_value()).collect::<Vec<FloatValue>>();
-                let array = self.context.f32_type().const_array(&values);
+                let values = values.iter().map(|value| value.into_float_value()).collect::<Vec<FloatValue>>();
+                let array = type_.into_float_type().const_array(&values);
+                Value::LLVMBasicValueEnum(array.into())
+            }
+            BasicTypeEnum::ArrayType(_) => {
+                let values = values.iter().map(|value| value.into_array_value()).collect::<Vec<ArrayValue>>();
+                let array = type_.into_array_type().const_array(&values);
                 Value::LLVMBasicValueEnum(array.into())
             }
             _ => panic!("Unsupported list type"),
         }
-
     }
 
     fn visit_index_expr(&mut self, expr: &IndexExpr<'ctx>) -> Value<'ctx> {
@@ -334,25 +348,16 @@ impl<'ctx> Visitor<'ctx> for CodeGenerator<'ctx> {
             _ => panic!("Index must be an integer"),
         };
 
-        let mut base_address = None;
-        for scope in self.symbol_table.iter().rev() {
-            if let Some(variable_info) = scope.get(expr.variable.name.as_str()) {
-                let alloca = variable_info.alloca;
-                base_address = Some(alloca);
-            }
-        }
+        let variable_info = self.get_variable_info(&expr.variable.name)
+                                .expect(format!("Variable '{}' not defined", expr.variable.name).as_str());
 
-        // TODO: currently only supports i8
-        let type_ = self.context.i8_type().const_int(0, false).get_type();
+        let base_address = variable_info.alloca;
+        let type_ = variable_info.type_.into_array_type().get_element_type();
 
-        if let Some(base_address) = base_address {
-            unsafe {
-                let address = self.builder.build_gep(type_, base_address, &[index], "index");
-                let value = self.builder.build_load(address.get_type(), address, "value");
-                Value::LLVMBasicValueEnum(value)
-            }
-        } else {
-            panic!("Variable '{}' not defined", expr.variable.name);
+        unsafe {
+            let address = self.builder.build_gep(type_, base_address, &[index], "index");
+            let value = self.builder.build_load(address.get_type(), address, "value");
+            Value::LLVMBasicValueEnum(value)
         }
     }
 
@@ -380,11 +385,9 @@ impl<'ctx> Visitor<'ctx> for CodeGenerator<'ctx> {
     fn visit_variable_expr(&mut self, expr: &VariableExpr) -> Value<'ctx> {
         let name = &expr.name;
 
-        for scope in self.symbol_table.iter().rev() {
-            if let Some(variable_info) = scope.get(name) {
-                let alloca = variable_info.alloca;
-                return self.builder.build_load(variable_info.type_, alloca, &name).into();
-            }
+        if let Some(variable_info) = self.get_variable_info(name) {
+            let alloca = variable_info.alloca;
+            return self.builder.build_load(variable_info.type_, alloca, &name).into();
         }
 
         let function = self.builder.get_insert_block().unwrap().get_parent().unwrap();
