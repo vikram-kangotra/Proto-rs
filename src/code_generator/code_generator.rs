@@ -352,7 +352,26 @@ impl<'ctx> Visitor<'ctx> for CodeGenerator<'ctx> {
                                 .expect(format!("Variable '{}' not defined", expr.variable.name).as_str());
 
         let base_address = variable_info.alloca;
-        let type_ = variable_info.type_.into_array_type().get_element_type();
+
+        let array_type = variable_info.type_.into_array_type();
+        let type_ = array_type.get_element_type();
+
+        let size = array_type.len();
+        let size = self.context.i32_type().const_int(size as u64, false);
+
+        let in_bounds: IntValue<'_> = self.builder.build_int_compare(inkwell::IntPredicate::ULT, index, size, "in_bounds");
+
+        let function = self.builder.get_insert_block().unwrap().get_parent().unwrap();
+
+        let error_block = self.context.append_basic_block(function, "error");
+        let continue_block = self.context.append_basic_block(function, "continue");
+
+        self.builder.build_conditional_branch(in_bounds, continue_block, error_block);
+
+        self.builder.position_at_end(error_block);
+        self.builder.build_unconditional_branch(error_block);
+
+        self.builder.position_at_end(continue_block);
 
         unsafe {
             let address = self.builder.build_gep(type_, base_address, &[index], "index");
