@@ -35,7 +35,7 @@ fn main() -> u8 {
     let list = ['A', 'R', 'Y', 'A', 'N'];
 
     let i = 0;
-    while i < 10 {
+    while i < 5 {
         putchar(list[i]); // TODO: Add support for multi-dimensional array Indexing
         i = i + 1;
     }

@@ -369,7 +369,11 @@ impl<'ctx> Visitor<'ctx> for CodeGenerator<'ctx> {
         self.builder.build_conditional_branch(in_bounds, continue_block, error_block);
 
         self.builder.position_at_end(error_block);
-        self.builder.build_unconditional_branch(error_block);
+
+        let exit_function = self.module.get_function("exit").unwrap();
+        self.builder.build_call(exit_function, &[self.context.i32_type().const_int(1, false).into()], "exit");
+
+        self.builder.build_unconditional_branch(continue_block);
 
         self.builder.position_at_end(continue_block);
 
