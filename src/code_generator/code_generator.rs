@@ -285,16 +285,25 @@ impl<'ctx> Visitor<'ctx> for CodeGenerator<'ctx> {
     fn visit_call_expr(&mut self, expr: &CallExpr<'ctx>) -> Value<'ctx> {
         let name = &expr.callee;
 
-        let function = match self.module.get_function(name) {
-            Some(function) => function,
-            None => panic!("Function '{}' not defined", name),
-        };
+        let function = self.module.get_function(name).expect(&format!("Function '{}' not defined", name));
 
         if expr.args.len() != function.count_params() as usize {
             panic!("Function '{}' takes {} arguments, but {} were supplied", name, function.count_params(), expr.args.len());
         }
 
-        let args = expr.args.iter().map(|arg| arg.accept(self).as_llvm_basic_value_enum().into()).collect::<Vec<BasicMetadataValueEnum>>();
+        let args = expr.args.iter().enumerate()
+            .map(|(i, arg)| {
+                let arg = arg.accept(self).as_llvm_basic_value_enum();
+                let param_type = function.get_nth_param(i as u32).unwrap().get_type();
+                let arg_type = arg.get_type();
+
+                if param_type != arg_type {
+                    panic!("Function '{}' argument {} must be of type {}, but {} was supplied", name, i, param_type, arg_type);
+                }
+
+                arg.into()
+            })
+            .collect::<Vec<BasicMetadataValueEnum>>();
 
         let ret_value = self.builder
             .build_call(function, &args, &name)
