@@ -55,7 +55,7 @@ expr: equality;
 assignment: IDENT ('=' expr)?;
 function_call: IDENT '(' expr* ')';
 list_expr: '[' (expr ',')* (expr ','?)? ']'
-index_expr: IDENT '[' expr ']';
+index_expr: (IDENT '[' expr ']')+;
 
 equality: comparison (('==' | '!=') comparison)*;
 comparison: term (('>' | '>=' | '<' | '<=') term)*;

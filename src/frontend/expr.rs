@@ -114,15 +114,14 @@ impl<'ctx> ListExpr<'ctx> {
 #[derive(Expr)]
 pub struct IndexExpr<'ctx> {
     pub variable: VariableExpr,
-    pub index: Box<dyn Expr<'ctx> + 'ctx>,
+    pub indices: Vec<Box<dyn Expr<'ctx> + 'ctx>>,
 }
 
 impl<'ctx> IndexExpr<'ctx> {
-    pub fn new(variable: VariableExpr, index: Box<dyn Expr<'ctx> + 'ctx>) -> Self {
+    pub fn new(variable: VariableExpr, indices: Vec<Box<dyn Expr<'ctx> + 'ctx>>) -> Self {
         Self {
             variable,
-            index,
+            indices,
         }
     }
 }
-

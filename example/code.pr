@@ -32,11 +32,11 @@ fn main() -> u8 {
     let a: u8 = 10;
     let b: u8 = area(3, 2);
 
-    let list = ['A', 'R', 'Y', 'A', 'N'];
+    let list = [['v'], ['i'], ['k'], ['r'], ['a']];
 
     let i = 0;
-    while i < 5 {
-        putchar(list[i]); // TODO: Add support for multi-dimensional array Indexing
+    while i < 10 {
+        putchar(list[i][0]); 
         i = i + 1;
     }
 

@@ -341,47 +341,54 @@ impl<'ctx> Visitor<'ctx> for CodeGenerator<'ctx> {
     }
 
     fn visit_index_expr(&mut self, expr: &IndexExpr<'ctx>) -> Value<'ctx> {
-        let index = expr.index.accept(self);
 
-        let index = match index.as_llvm_basic_value_enum().get_type() {
-            BasicTypeEnum::IntType(_) => index.as_llvm_basic_value_enum().into_int_value(),
-            _ => panic!("Index must be an integer"),
-        };
+        let indices = expr.indices
+            .iter()
+            .map(|index| index.accept(self).as_llvm_basic_value_enum().into_int_value())
+            .collect::<Vec<IntValue>>();
 
         let variable_info = self.get_variable_info(&expr.variable.name)
                                 .expect(format!("Variable '{}' not defined", expr.variable.name).as_str());
 
-        let base_address = variable_info.alloca;
+        let mut address = variable_info.alloca;
+        let mut type_ = variable_info.type_;
+        let mut value = self.builder.build_load(type_, address, "value");
 
-        let array_type = variable_info.type_.into_array_type();
-        let type_ = array_type.get_element_type();
+        for index in indices {
+            if !type_.is_array_type() {
+                panic!("Cannot index non-array type");
+            }
 
-        let size = array_type.len();
-        let size = self.context.i32_type().const_int(size as u64, false);
+            let array_type = type_.into_array_type();
+            let len = array_type.len();
 
-        let in_bounds: IntValue<'_> = self.builder.build_int_compare(inkwell::IntPredicate::ULT, index, size, "in_bounds");
+            let len = self.context.i32_type().const_int(len as u64, false);
+            let comparison = self.builder.build_int_compare(inkwell::IntPredicate::ULT, index, len, "comparison");
 
-        let function = self.builder.get_insert_block().unwrap().get_parent().unwrap();
+            let function = self.builder.get_insert_block().unwrap().get_parent().unwrap();
+            let continue_block = self.context.append_basic_block(function, "continue");
+            let error_block = self.context.append_basic_block(function, "error");
 
-        let error_block = self.context.append_basic_block(function, "error");
-        let continue_block = self.context.append_basic_block(function, "continue");
+            self.builder.build_conditional_branch(comparison, continue_block, error_block);
 
-        self.builder.build_conditional_branch(in_bounds, continue_block, error_block);
+            self.builder.position_at_end(error_block);
+            let exit_fn = self.module.get_function("exit").unwrap();
+            self.builder.build_call(exit_fn, &[self.context.i32_type().const_int(1, false).into()], "exit");
 
-        self.builder.position_at_end(error_block);
+            self.builder.build_unconditional_branch(continue_block);
 
-        let exit_function = self.module.get_function("exit").unwrap();
-        self.builder.build_call(exit_function, &[self.context.i32_type().const_int(1, false).into()], "exit");
+            self.builder.position_at_end(continue_block);
 
-        self.builder.build_unconditional_branch(continue_block);
+            type_ = array_type.get_element_type();
 
-        self.builder.position_at_end(continue_block);
-
-        unsafe {
-            let address = self.builder.build_gep(type_, base_address, &[index], "index");
-            let value = self.builder.build_load(address.get_type(), address, "value");
-            Value::LLVMBasicValueEnum(value)
+            unsafe {
+                address = self.builder.build_gep(type_, address, &[index], "index");
+                value = self.builder.build_load(type_, address, "value");
+                type_ = value.get_type();
+            }
         }
+
+        Value::LLVMBasicValueEnum(value)
     }
 
     fn visit_literal_expr(&mut self, expr: &LiteralExpr) -> Value<'ctx> {

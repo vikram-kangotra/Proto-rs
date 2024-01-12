@@ -374,10 +374,17 @@ impl<'ctx> Parser {
                 } else {
                     let var_expr = VariableExpr::new(name);
                     if self.lexer.peek().unwrap().kind == TokenKind::LeftBracket {
-                        self.lexer.next();
-                        let index = self.expression();
-                        self.consume(TokenKind::RightBracket);
-                        return Box::new(IndexExpr::new(var_expr, index) as IndexExpr<'ctx>)
+                        let mut indices = Vec::new();
+                        loop {
+                            self.lexer.next();
+                            let index = self.expression();
+                            indices.push(index);
+                            self.consume(TokenKind::RightBracket);
+                            if self.lexer.peek().unwrap().kind != TokenKind::LeftBracket {
+                                break;
+                            }
+                        }
+                        return Box::new(IndexExpr::new(var_expr, indices) as IndexExpr<'ctx>);
                     }
                     return Box::new(var_expr);
                 }
