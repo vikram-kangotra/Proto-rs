@@ -1,9 +1,9 @@
-use super::{visitor::Visitor, expr::Expr, type_::Type};
+use super::{visitor::StmtVisitor, expr::Expr, type_::Type};
 
 use proto_rs_macros::Stmt;
 
 pub trait Stmt<'ctx> {
-    fn accept(&self, visitor: &mut dyn Visitor<'ctx>);
+    fn accept(&self, visitor: &mut dyn StmtVisitor<'ctx>);
 }
 
 #[derive(Stmt)]

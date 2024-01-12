@@ -1,4 +1,4 @@
-use crate::frontend::{visitor::Visitor, expr::{LiteralExpr, UnaryExpr, BinaryExpr}, value::{Value, LiteralValue, IntegerValue, FloatingValue, IntValue, FloatValue}, token::TokenKind};
+use crate::frontend::{visitor::ExprVisitor, expr::{LiteralExpr, UnaryExpr, BinaryExpr, VariableExpr, VarAssignExpr, CallExpr, ListExpr, IndexExpr}, value::{Value, LiteralValue, IntegerValue, FloatingValue, IntValue, FloatValue}, token::TokenKind};
 
 use super::CompileTimeEvaluator;
 
@@ -8,7 +8,15 @@ impl CompileTimeEvaluator {
     }
 }
 
-impl<'ctx> Visitor<'ctx> for CompileTimeEvaluator {
+impl<'ctx> ExprVisitor<'ctx> for CompileTimeEvaluator {
+
+    fn visit_variable_expr(&mut self, _expr: &VariableExpr) -> Value<'ctx> { unimplemented!("CompileTimeEvaluator::visit_variable_expr") }
+    fn visit_var_assign_expr(&mut self, _expr: &VarAssignExpr<'ctx>) -> Value<'ctx> { unimplemented!("CompileTimeEvaluator::visit_var_assign_expr") }
+
+    fn visit_call_expr(&mut self, _expr: &CallExpr<'ctx>) -> Value<'ctx> { unimplemented!("CompileTimeEvaluator::visit_call_expr") }
+    fn visit_list_expr(&mut self, _expr: &ListExpr<'ctx>) -> Value<'ctx> { unimplemented!("CompileTimeEvaluator::visit_list_expr") }
+    fn visit_index_expr(&mut self, _expr: &IndexExpr<'ctx>) -> Value<'ctx> { unimplemented!("CompileTimeEvaluator::visit_index_expr") }
+
     fn visit_literal_expr(&mut self, expr: &LiteralExpr) -> Value<'ctx> { 
         expr.value.into()
     }

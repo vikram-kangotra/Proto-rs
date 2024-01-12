@@ -1,12 +1,12 @@
-use crate::frontend::visitor::Visitor;
+use crate::frontend::visitor::ExprVisitor;
 use crate::frontend::token::Token;
 
 use proto_rs_macros::Expr;
 
-use super::{value::{LiteralValue, Value}, type_::Type};
+use super::value::{LiteralValue, Value};
 
 pub trait Expr<'ctx> {
-    fn accept(&self, visitor: &mut dyn Visitor<'ctx>) -> Value<'ctx>;
+    fn accept(&self, visitor: &mut dyn ExprVisitor<'ctx>) -> Value<'ctx>;
 }
 
 #[derive(Expr)]

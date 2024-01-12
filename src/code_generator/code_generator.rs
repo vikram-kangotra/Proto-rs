@@ -11,7 +11,7 @@ use crate::frontend::expr::{BinaryExpr, LiteralExpr, UnaryExpr, VariableExpr, Va
 use crate::frontend::stmt::{Stmt, ExprStmt, VarDeclStmt, ReturnStmt, BlockStmt, IfStmt, WhileStmt, BreakStmt, ContinueStmt, FunctionDeclStmt, FunctionDefStmt};
 use crate::frontend::type_::{Type, LiteralType, self};
 use crate::frontend::value::{self, Value, IntegerValue, FloatingValue};
-use crate::frontend::visitor::Visitor;
+use crate::frontend::visitor::{StmtVisitor, ExprVisitor};
 use crate::frontend::token::TokenKind;
 
 use super::{VariableInfo, FunctionInfo};
@@ -88,7 +88,7 @@ impl<'ctx> CodeGenerator<'ctx> {
     }
 }
 
-impl<'ctx> Visitor<'ctx> for CodeGenerator<'ctx> {
+impl<'ctx> StmtVisitor<'ctx> for CodeGenerator<'ctx> {
 
     fn visit_expr_stmt(&mut self, stmt: &ExprStmt<'ctx>) {
         stmt.expr.accept(self);
@@ -281,7 +281,9 @@ impl<'ctx> Visitor<'ctx> for CodeGenerator<'ctx> {
 
         stmt.body.accept(self);
     }
+}
 
+impl<'ctx> ExprVisitor<'ctx> for CodeGenerator<'ctx> {
     fn visit_call_expr(&mut self, expr: &CallExpr<'ctx>) -> Value<'ctx> {
         let name = &expr.callee;
 
@@ -618,5 +620,4 @@ impl<'ctx> Visitor<'ctx> for CodeGenerator<'ctx> {
             _ => panic!("Unexpected token"),
         } 
     }
-
 }

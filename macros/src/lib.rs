@@ -32,7 +32,7 @@ pub fn expr_derive(item: TokenStream) -> TokenStream {
     let output = quote! {
 
         impl<'ctx> Expr<'ctx> for #item_name<#lifetime> {
-            fn accept(&self, visitor: &mut dyn Visitor<'ctx>) -> Value<'ctx> {
+            fn accept(&self, visitor: &mut dyn ExprVisitor<'ctx>) -> Value<'ctx> {
                 visitor.#visit(self)
             }
         }
@@ -72,7 +72,7 @@ pub fn stmt_derive(item: TokenStream) -> TokenStream {
     let output = quote! {
 
         impl<'ctx> Stmt<'ctx> for #item_name<#lifetime> {
-            fn accept(&self, visitor: &mut dyn Visitor<'ctx>) {
+            fn accept(&self, visitor: &mut dyn StmtVisitor<'ctx>) {
                 visitor.#visit(self);
             }
         }
